@@ -26,6 +26,7 @@ This branded Streamlit prototype brings that idea to life with synthetic example
 | --- | --- |
 | **Live decision** | Inspect an illustrative transaction score, suggested action, and the signals behind it. |
 | **Counterfactual explorer** | Adjust transaction amount and timing, then compare simulated “yes, if…” options. |
+| **Checkout plan** | See which PayPal sandbox calls each decision (and each “yes, if…” step) would trigger. A dry run: it never contacts PayPal. |
 | **Policy battle** | Compare synthetic cumulative-cost curves across four illustrative policies. |
 
 ## Run locally
@@ -73,6 +74,21 @@ python scripts/paypal_smoke_test.py --action full      # capture in full
 ```
 
 The script prints an approval link. Open it in a private window and sign in with your **sandbox personal** account, then press Enter in the terminal.
+
+### How decisions map to PayPal calls
+
+The client lives in `src/paypal/client.py` (sandbox only; it refuses non-sandbox URLs) and the decision-to-call mapping in `src/paypal/gateway.py`. Orders must be created with intent `AUTHORIZE` so every option below stays available.
+
+| Engine decision | PayPal / app behavior |
+| --- | --- |
+| ALLOW | Capture the full authorization |
+| “Reduce the amount by 25%” | Partial capture (`final_capture: false`); the remainder stays authorized |
+| “Wait 30 minutes” | Keep the authorization, then re-score and capture later |
+| STEP UP | Our app asks for a verification, then captures (a PayPal call is only made after it passes) |
+| HOLD | Leave the authorization uncaptured while the payment is reviewed |
+| BLOCK | Void the authorization |
+
+Step-up and hold are app-level behavior, not PayPal features. The PayPal calls are covered by mocked unit tests (`tests/test_paypal.py`); only the smoke test talks to the real sandbox.
 
 ## Run tests
 

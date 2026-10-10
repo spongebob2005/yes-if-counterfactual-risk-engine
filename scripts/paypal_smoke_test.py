@@ -1,101 +1,69 @@
 """PayPal sandbox smoke test for the 'yes, if' project.
 
-Proves the exact flow the risk engine will control:
-  create order (intent AUTHORIZE) -> buyer approves -> authorize
-  -> then ONE of: full capture / partial capture / void
+Runs the flow the risk engine controls:
+  create order (intent AUTHORIZE) -> buyer approves -> authorize -> capture / partial / void
 
 Setup:
   pip install requests python-dotenv
   .env  ->  PAYPAL_CLIENT_ID=...   PAYPAL_CLIENT_SECRET=...
-Run:
-  python paypal_smoke_test.py --action partial     # capture 60% now
-  python paypal_smoke_test.py --action full
-  python paypal_smoke_test.py --action void
+
+Run (from the repo root):
+  python scripts/paypal_smoke_test.py --action partial
+  python scripts/paypal_smoke_test.py --action full
+  python scripts/paypal_smoke_test.py --action void
 """
+
 import argparse
-import os
 import sys
-import uuid
+from pathlib import Path
 
-import requests
-from dotenv import load_dotenv
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-BASE = "https://api-m.sandbox.paypal.com"   # sandbox only
-load_dotenv()
-CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
-CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
-
-
-def check(resp, what):
-    if not resp.ok:
-        print(f"\n[FAILED] {what}: HTTP {resp.status_code}\n{resp.text}")
-        sys.exit(1)
-    return resp.json() if resp.text else {}
+from src.paypal import (  # noqa: E402
+    PayPalClient,
+    PayPalError,
+    execute_plan,
+    partial_capture_plan,
+    plan_for_action,
+)
 
 
-def get_token():
-    r = requests.post(f"{BASE}/v1/oauth2/token", auth=(CLIENT_ID, CLIENT_SECRET),
-                      data={"grant_type": "client_credentials"}, timeout=30)
-    return check(r, "get access token")["access_token"]
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--action", choices=["full", "partial", "void"], default="partial")
+    parser.add_argument("--amount", type=float, default=100.0)
+    parser.add_argument("--fraction", type=float, default=0.6, help="share captured now for 'partial'")
+    args = parser.parse_args()
 
+    try:
+        client = PayPalClient.from_env()
+        client.access_token()
+        print("1. Got access token.")
 
-def api(token, method, path, body=None):
-    headers = {"Authorization": f"Bearer {token}",
-               "Content-Type": "application/json",
-               "PayPal-Request-Id": str(uuid.uuid4())}   # idempotency key
-    r = requests.request(method, f"{BASE}{path}", headers=headers, json=body, timeout=30)
-    return check(r, f"{method} {path}")
+        order = client.create_authorize_order(args.amount)
+        print(f"2. Created order {order['id']} (status {order['status']}).")
+        print(f"\n   Open this in a PRIVATE window and log in with your SANDBOX PERSONAL account:\n   {order['approve_url']}\n")
+        print("   After you approve, the browser lands on example.com - that is expected.")
+        input("   Press Enter here once you have approved... ")
 
+        authorization = client.authorize_order(order["id"])
+        print(f"3. Authorized: {authorization['id']} (status {authorization['status']}).")
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--action", choices=["full", "partial", "void"], default="partial")
-    ap.add_argument("--amount", default="100.00")
-    args = ap.parse_args()
+        if args.action == "full":
+            plan = plan_for_action("ALLOW", args.amount)
+        elif args.action == "void":
+            plan = plan_for_action("BLOCK", args.amount)
+        else:
+            plan = partial_capture_plan(args.amount, args.fraction)
+        print(f"4. Plan '{plan.label}': " + "; ".join(step.description for step in plan.steps))
+        for result in execute_plan(client, authorization["id"], plan):
+            print(f"   -> {result}")
 
-    if not CLIENT_ID or not CLIENT_SECRET:
-        sys.exit("Missing PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET in .env")
-
-    token = get_token()
-    print("1. Got access token.")
-
-    order = api(token, "POST", "/v2/checkout/orders", {
-        "intent": "AUTHORIZE",
-        "purchase_units": [{"amount": {"currency_code": "USD", "value": args.amount}}],
-        "payment_source": {"paypal": {"experience_context": {
-            "return_url": "https://example.com/return",
-            "cancel_url": "https://example.com/cancel",
-            "user_action": "PAY_NOW"}}},
-    })
-    order_id = order["id"]
-    link = next((l["href"] for l in order["links"]
-                 if l["rel"] in ("payer-action", "approve")), None)
-    print(f"2. Created order {order_id} (status {order['status']}).")
-    print(f"\n   Open this in a PRIVATE window and log in with your SANDBOX PERSONAL account:\n   {link}\n")
-    print("   After you approve, the browser lands on example.com - that is expected.")
-    input("   Press Enter here once you have approved... ")
-
-    auth = api(token, "POST", f"/v2/checkout/orders/{order_id}/authorize")
-    authorization = auth["purchase_units"][0]["payments"]["authorizations"][0]
-    auth_id = authorization["id"]
-    print(f"3. Authorized. authorization id = {auth_id} (status {authorization['status']}).")
-
-    if args.action == "full":
-        cap = api(token, "POST", f"/v2/payments/authorizations/{auth_id}/capture",
-                  {"final_capture": True})
-        print(f"4. Full capture: {cap['status']}")
-    elif args.action == "partial":
-        part = f"{float(args.amount) * 0.6:.2f}"
-        cap = api(token, "POST", f"/v2/payments/authorizations/{auth_id}/capture",
-                  {"amount": {"currency_code": "USD", "value": part}, "final_capture": False})
-        print(f"4. Partial capture of {part}: {cap['status']} (remainder still authorized)")
-    else:
-        api(token, "POST", f"/v2/payments/authorizations/{auth_id}/void")
-        print("4. Authorization voided.")
-
-    final = api(token, "GET", f"/v2/payments/authorizations/{auth_id}")
-    print(f"5. Authorization status now: {final['status']}")
-    print("\nSmoke test complete.")
+        final = client.get_authorization(authorization["id"])
+        print(f"5. Authorization status now: {final['status']}")
+        print("\nSmoke test complete.")
+    except (PayPalError, ValueError) as error:
+        sys.exit(f"\n[FAILED] {error}")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from risk_engine import (
     policy_cost_series,
     score_transaction,
 )
+from src.paypal import plan_for_action, plan_for_counterfactual
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,7 +93,7 @@ with st.sidebar:
     st.caption("A clearer path from risk signals to a safer yes.")
     page = st.radio(
         "Workspace",
-        ("Live decision", "Counterfactual explorer", "Policy battle"),
+        ("Live decision", "Counterfactual explorer", "Checkout plan", "Policy battle"),
         label_visibility="collapsed",
     )
     st.divider()
@@ -238,6 +239,43 @@ elif page == "Counterfactual explorer":
             "guarantees. Only amount and timing sliders change the heuristic score.</div>",
             unsafe_allow_html=True,
         )
+
+elif page == "Checkout plan":
+    st.title("From decision to PayPal call.")
+    st.markdown(
+        '<p class="lede">See which PayPal sandbox calls each decision would trigger. '
+        "This page is a dry run: it never contacts PayPal.</p>",
+        unsafe_allow_html=True,
+    )
+    txn = transaction_selector()
+    score, _ = score_transaction(txn)
+    action = action_for_score(score)
+    plan = plan_for_action(action, txn.amount)
+
+    def render_plan(plan):
+        for number, step in enumerate(plan.steps, start=1):
+            where = "PayPal call" if step.is_paypal_call else "Our app"
+            extra = f" · ${step.amount:,.2f}" if step.amount is not None else ""
+            extra += " · remainder stays authorized" if step.kind == "capture" and not step.final_capture else ""
+            st.markdown(f"{number}. **{step.kind.upper()}** ({where}){extra} — {step.description}")
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.subheader(f"Engine action: {action}")
+        st.caption(f"Heuristic score {score:.0%} on ${txn.amount:,.2f}")
+        render_plan(plan)
+    with right:
+        st.subheader("If the buyer takes a “yes, if…” step")
+        for option in counterfactual_options(txn):
+            st.markdown(f"**{option['action']}**")
+            render_plan(plan_for_counterfactual(str(option["action"]), txn.amount))
+    st.markdown(
+        '<div class="notice">Assumes the order was created with intent AUTHORIZE. '
+        "To exercise these calls for real against the sandbox, run "
+        "<code>scripts/paypal_smoke_test.py</code>. Step-up and hold are handled by our app, "
+        "not by a PayPal feature.</div>",
+        unsafe_allow_html=True,
+    )
 
 else:
     st.title("When conditions shift, friction matters.")
