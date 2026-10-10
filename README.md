@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="./files/yes-if_1-primary.png" alt="yes, if — The cheapest way to yes" width="640">
-</p>
+![yes, if — The cheapest way to yes](files/yes-if_1-primary.png)
 
 <h1 align="center">Counterfactual Payment Risk Engine</h1>
 
