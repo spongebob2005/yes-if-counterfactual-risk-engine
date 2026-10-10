@@ -67,6 +67,10 @@ python -m unittest discover -s tests
 
 Every transaction, score, action, mitigation, and policy curve shown in the dashboard is synthetic. The score is based on hand-written heuristics; it is **not** a trained model, calibrated probability, causal estimate, or validated fraud signal. Do not use this prototype to approve, decline, or investigate real payments.
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ---
 
 <p align="center">
