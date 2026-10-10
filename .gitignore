@@ -5,3 +5,8 @@ __pycache__/
 data/raw/
 data/processed/
 /Counterfactual_Risk_Engine_Build_Plan.pdf
+
+# secrets (PayPal sandbox keys live here; never commit)
+.env
+.env.*
+!.env.example

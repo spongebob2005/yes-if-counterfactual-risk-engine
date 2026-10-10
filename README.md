@@ -57,6 +57,23 @@ python -m scripts.prepare_ieee_data
 
 The script joins the files by `TransactionID`, sorts transactions chronologically, builds prior-only history features, and creates 60/15/10/15 train, validation, calibration, and test splits. Processed Parquet files and category levels are written to `data/processed/`; raw and processed data are excluded from version control.
 
+## Optional: PayPal sandbox smoke test
+
+The risk engine is designed to sit between PayPal order approval and payment capture. This standalone script exercises the PayPal **sandbox** flow it will control: create an order with intent `AUTHORIZE`, approve it as a sandbox buyer, authorize, then capture, partially capture, or void. It is not yet wired into the dashboard, and it only talks to the sandbox.
+
+1. Create a free account at [developer.paypal.com](https://developer.paypal.com) and open **Apps & Credentials** in **Sandbox** mode.
+2. Copy `.env.example` to `.env` and fill in your sandbox Client ID and Secret. `.env` is git-ignored; never commit real keys.
+3. Install the extra dependencies and run:
+
+```bash
+python -m pip install requests python-dotenv
+python scripts/paypal_smoke_test.py --action partial   # capture 60% now; the rest stays authorized
+python scripts/paypal_smoke_test.py --action void      # void the authorization
+python scripts/paypal_smoke_test.py --action full      # capture in full
+```
+
+The script prints an approval link. Open it in a private window and sign in with your **sandbox personal** account, then press Enter in the terminal.
+
 ## Run tests
 
 ```bash
