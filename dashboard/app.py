@@ -15,11 +15,9 @@ from src.paypal import plan_for_action, plan_for_counterfactual
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIMARY_LOGO = ROOT / "files" / "yes-if_1-primary.png"
-INVERSE_LOGO = ROOT / "files" / "yes-if_2-inverse.png"
-
 st.set_page_config(
-    page_title="yes, if — Payment Risk Engine",
-    page_icon="🟢",
+    page_title="yes, if - Payment Risk Engine",
+    page_icon=str(PRIMARY_LOGO),
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -28,67 +26,114 @@ st.markdown(
     """
     <style>
     :root {
-        --navy: #101a2b;
+        --page: #f3f7f6;
+        --surface: #fbfdfc;
         --ink: #172335;
-        --muted: #657386;
-        --green: #0b9d7a;
-        --mint: #e7f7f1;
-        --paper: #f5f7fa;
-        --line: #e5eaf0;
+        --muted: #536575;
+        --accent: #0b927b;
+        --accent-strong: #07594f;
+        --accent-soft: #e2f1ed;
+        --line: #d7e2df;
+        --warning: #73531b;
+        --warning-soft: #fff5d9;
+        --radius-surface: 14px;
+        --radius-control: 8px;
+        --radius-pill: 999px;
     }
-    .stApp { background: var(--paper); color: var(--ink); }
-    [data-testid="stSidebar"] { background: var(--navy); }
-    [data-testid="stSidebar"] * { color: #f3f7fb; }
+    .stApp {
+        background: var(--page);
+        color: var(--ink);
+        font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+    }
+    [data-testid="stSidebar"] {
+        background: var(--surface);
+        border-right: 1px solid var(--line);
+    }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+    [data-testid="stSidebar"] label {
+        color: var(--ink);
+    }
     [data-testid="stSidebar"] [data-testid="stRadio"] label {
-        border-radius: 10px;
-        padding: 7px 10px;
+        border-radius: var(--radius-control);
+        padding: 8px 10px;
+        color: var(--ink);
     }
-    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1420px; }
-    h1, h2, h3 { color: var(--ink); letter-spacing: -0.035em; }
+    [data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+        background: var(--accent-soft);
+    }
+    .block-container { padding: 2.4rem clamp(1.25rem, 4vw, 3.5rem) 3.5rem; max-width: 1440px; }
+    h1, h2, h3 { color: var(--ink); letter-spacing: -0.04em; }
+    h1 { font-size: clamp(2rem, 3.2vw, 2.7rem); line-height: 1.12; }
+    h2, h3 { line-height: 1.2; }
     .eyebrow {
-        color: var(--green); text-transform: uppercase; letter-spacing: .14em;
-        font-size: .72rem; font-weight: 800; margin: 0 0 8px;
+        color: var(--accent-strong); text-transform: uppercase; letter-spacing: .1em;
+        font-size: .72rem; font-weight: 800; margin: .5rem 0 .65rem;
     }
-    .lede { color: var(--muted); font-size: 1rem; margin-top: -.4rem; }
+    .lede { color: var(--muted); font-size: 1rem; line-height: 1.65; margin-top: -.35rem; max-width: 68ch; }
     .panel {
-        background: #fff; border: 1px solid var(--line); border-radius: 16px;
-        padding: 20px 22px; box-shadow: 0 8px 24px rgba(16, 26, 43, .035);
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface);
+        padding: 21px 23px; box-shadow: 0 12px 32px rgba(20, 53, 46, .045);
     }
     .panel-label {
         color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
         font-size: .7rem; font-weight: 750;
     }
-    .big-value { color: var(--ink); font-size: 2rem; font-weight: 750; line-height: 1.1; }
+    .big-value { color: var(--ink); font-size: 2.25rem; font-weight: 750; line-height: 1.05; font-variant-numeric: tabular-nums; }
     .action-pill {
-        display: inline-block; background: var(--mint); color: #087d63;
-        border-radius: 100px; padding: 6px 11px; font-size: .76rem;
+        display: inline-block; background: var(--accent-soft); color: var(--accent-strong);
+        border-radius: var(--radius-pill); padding: 6px 11px; font-size: .76rem;
         font-weight: 800; letter-spacing: .04em;
     }
     .notice {
-        background: #fff8e8; color: #73531b; border: 1px solid #f2dfb7;
-        border-radius: 12px; padding: 12px 15px; font-size: .86rem;
+        background: var(--warning-soft); color: var(--warning); border: 1px solid #d9c994;
+        border-radius: var(--radius-control); padding: 13px 16px; font-size: .86rem; line-height: 1.55;
     }
     .option {
-        background: #fff; border: 1px solid var(--line); border-radius: 13px;
-        padding: 15px 17px; margin: 9px 0;
+        border-top: 1px solid var(--line);
+        padding: 16px 2px 15px;
     }
-    .option-title { font-size: .98rem; font-weight: 750; color: var(--ink); }
-    .option-detail { font-size: .83rem; color: var(--muted); margin-top: 4px; }
+    .option-title { font-size: 1rem; font-weight: 750; color: var(--ink); }
+    .option-detail { font-size: .84rem; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .option-metrics { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 9px; color: var(--muted); font-size: .78rem; }
     [data-testid="stMetric"] {
-        background: #fff; border: 1px solid var(--line); border-radius: 14px;
-        padding: 14px 17px;
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-control);
+        padding: 15px 17px;
     }
-    [data-testid="stMetricLabel"] { color: var(--muted); }
-    div[data-testid="stProgress"] > div > div { background-color: var(--green); }
+    [data-testid="stMetricLabel"], [data-testid="stMetricDelta"] { color: var(--muted); }
+    [data-testid="stSelectbox"] label, [data-testid="stSlider"] label { color: var(--ink); font-weight: 650; }
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stSlider"] [data-baseweb="slider"] { border-radius: var(--radius-control); }
+    [data-testid="stButton"] button {
+        min-height: 42px;
+        border-radius: var(--radius-control);
+        border-color: var(--accent-strong);
+        color: var(--accent-strong);
+        font-weight: 700;
+        transition: background-color .18s ease, transform .18s ease;
+    }
+    [data-testid="stButton"] button:hover { background: var(--accent-soft); color: var(--accent-strong); }
+    [data-testid="stButton"] button:active { transform: scale(.98); }
     hr { border-color: var(--line); }
+    .snapshot-grid { display: grid; gap: 12px; margin-top: 16px; }
+    .snapshot-item { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .snapshot-label { color: var(--muted); }
+    .snapshot-value { color: var(--ink); font-weight: 650; text-align: right; }
+    @media (max-width: 760px) {
+        .block-container { padding: 1.5rem 1rem 2.5rem; }
+        .panel { padding: 17px; }
+        [data-testid="stSidebar"] { border-right: 0; border-bottom: 1px solid var(--line); }
+        .snapshot-item { align-items: flex-start; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 with st.sidebar:
-    if INVERSE_LOGO.exists():
-        st.image(str(INVERSE_LOGO), width="stretch")
     st.markdown("### Payment Risk Engine")
     st.caption("A clearer path from risk signals to a safer yes.")
     page = st.radio(
@@ -105,10 +150,10 @@ with st.sidebar:
     st.caption("No real payment data is processed.")
 
 if PRIMARY_LOGO.exists():
-    st.image(str(PRIMARY_LOGO), width=250)
+    st.image(str(PRIMARY_LOGO), width=190)
 
 st.markdown(
-    '<div class="eyebrow">Counterfactual payment risk engine · prototype</div>',
+    '<div class="eyebrow">Counterfactual payment risk engine | prototype</div>',
     unsafe_allow_html=True,
 )
 
@@ -118,7 +163,7 @@ def transaction_selector() -> Transaction:
         "Choose a sample transaction",
         SAMPLE_TRANSACTIONS,
         format_func=lambda txn: (
-            f"{txn.transaction_id}  ·  ${txn.amount:,.2f}"
+            f"{txn.transaction_id}  |  ${txn.amount:,.2f}"
         ),
     )
 
@@ -136,8 +181,7 @@ def risk_label(score: float) -> str:
 if page == "Live decision":
     st.title("A decision with a way forward.")
     st.markdown(
-        '<p class="lede">Explore what the demo engine would do with a sample payment — '
-        "and why.</p>",
+        '<p class="lede">Explore how the demo engine scores a sample payment, and why.</p>',
         unsafe_allow_html=True,
     )
     txn = transaction_selector()
@@ -146,17 +190,17 @@ if page == "Live decision":
 
     left, right = st.columns([1.15, 0.85], gap="large")
     with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-label">Illustrative assessment</div>', unsafe_allow_html=True)
-        metric, decision = st.columns(2)
-        metric.metric("Heuristic risk score", f"{score:.0%}", risk_label(score))
-        decision.metric("Suggested action", action)
-        st.progress(score, text="Relative score · not a calibrated probability")
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="panel-label">Illustrative assessment</div>', unsafe_allow_html=True)
+            metric, decision = st.columns(2)
+            metric.metric("Heuristic risk score", f"{score:.0%}")
+            decision.metric("Suggested action", action)
+            metric.caption(f"Risk band: {risk_label(score)}")
+            st.caption("This hand-written score is not a calibrated probability.")
         st.subheader("Signals behind this result")
         if reasons:
             for name, weight in reasons[:4]:
-                st.markdown(f"- **{name}** · illustrative contribution {weight:.0%}")
+                st.markdown(f"- **{name}**: illustrative contribution {weight:.0%}")
         else:
             st.markdown("No elevated signals in this sample.")
     with right:
@@ -164,13 +208,14 @@ if page == "Live decision":
         st.markdown(
             f"""
             <div class="panel">
-            <div class="panel-label">Sample · {txn.transaction_id}</div>
+            <div class="panel-label">Sample | {txn.transaction_id}</div>
             <h2 style="margin:.45rem 0 1rem">${txn.amount:,.2f}</h2>
-            <div>⏱ &nbsp;{txn.minutes_since_last} min since previous transaction</div>
-            <div style="margin-top:.55rem">⌖ &nbsp;{txn.distance_km:,} km from usual location</div>
-            <div style="margin-top:.55rem">▦ &nbsp;{txn.velocity_1h} transactions in the last hour</div>
-            <div style="margin-top:.55rem">◉ &nbsp;{"New" if txn.new_device else "Known"} device ·
-            {"International" if txn.international else "Domestic"}</div>
+            <div class="snapshot-grid">
+              <div class="snapshot-item"><span class="snapshot-label">Time since previous</span><span class="snapshot-value">{txn.minutes_since_last} min</span></div>
+              <div class="snapshot-item"><span class="snapshot-label">Distance from usual location</span><span class="snapshot-value">{txn.distance_km:,} km</span></div>
+              <div class="snapshot-item"><span class="snapshot-label">Transactions in the last hour</span><span class="snapshot-value">{txn.velocity_1h}</span></div>
+              <div class="snapshot-item"><span class="snapshot-label">Device and region</span><span class="snapshot-value">{"New" if txn.new_device else "Known"} | {"International" if txn.international else "Domestic"}</span></div>
+            </div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -192,33 +237,36 @@ elif page == "Counterfactual explorer":
     txn = transaction_selector()
     controls, result = st.columns([0.9, 1.1], gap="large")
     with controls:
-        st.subheader("Adjust the transaction")
-        amount = st.slider(
-            "Transaction amount",
-            min_value=0.0,
-            max_value=max(500.0, float(txn.amount) * 1.5),
-            value=float(txn.amount),
-            step=10.0,
-            format="$%.2f",
-        )
-        delay = st.slider(
-            "Minutes since previous transaction",
-            min_value=0,
-            max_value=120,
-            value=min(txn.minutes_since_last, 120),
-            step=1,
-        )
+        with st.container(border=True):
+            st.subheader("Adjust the transaction")
+            amount = st.slider(
+                "Transaction amount",
+                min_value=0.0,
+                max_value=max(500.0, float(txn.amount) * 1.5),
+                value=float(txn.amount),
+                step=10.0,
+                format="$%.2f",
+            )
+            delay = st.slider(
+                "Minutes since previous transaction",
+                min_value=0,
+                max_value=120,
+                value=min(txn.minutes_since_last, 120),
+                step=1,
+            )
         baseline, _ = score_transaction(txn)
         adjusted, _ = score_transaction(
             txn, amount=amount, minutes_since_last=delay
         )
-        st.metric(
-            "Illustrative score",
+        before, after = st.columns(2)
+        before.metric("Sample baseline", f"{baseline:.0%}")
+        after.metric(
+            "Adjusted score",
             f"{adjusted:.0%}",
             f"{(adjusted - baseline):+.0%} vs. sample",
             delta_color="inverse",
         )
-        st.progress(adjusted, text="Relative score · not a calibrated probability")
+        st.caption("Both scores are illustrative. The change is not a causal prediction.")
     with result:
         st.subheader("Ranked “yes, if…” options")
         st.caption("Simulated score movement and relative friction assumptions.")
@@ -226,10 +274,14 @@ elif page == "Counterfactual explorer":
             st.markdown(
                 f"""
                 <div class="option">
-                  <div class="panel-label">Option {index} · score {float(option["score"]):.0%}
-                  · ↓ {float(option["reduction"]):.0%}</div>
+                  <div class="panel-label">Ranked option {index}</div>
                   <div class="option-title">{option["action"]}</div>
                   <div class="option-detail">{option["detail"]}</div>
+                  <div class="option-metrics">
+                    <span>Simulated score {float(option["score"]):.0%}</span>
+                    <span>Reduction {float(option["reduction"]):.0%}</span>
+                    <span>Relative friction {float(option["friction"]):.0%}</span>
+                  </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -255,9 +307,9 @@ elif page == "Checkout plan":
     def render_plan(plan):
         for number, step in enumerate(plan.steps, start=1):
             where = "PayPal call" if step.is_paypal_call else "Our app"
-            extra = f" · ${step.amount:,.2f}" if step.amount is not None else ""
-            extra += " · remainder stays authorized" if step.kind == "capture" and not step.final_capture else ""
-            st.markdown(f"{number}. **{step.kind.upper()}** ({where}){extra} — {step.description}")
+            extra = f" | ${step.amount:,.2f}" if step.amount is not None else ""
+            extra += " | remainder stays authorized" if step.kind == "capture" and not step.final_capture else ""
+            st.markdown(f"{number}. **{step.kind.upper()}** ({where}){extra}: {step.description}")
 
     left, right = st.columns(2, gap="large")
     with left:

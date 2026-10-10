@@ -1,0 +1,6 @@
+{
+  "buildCommand": "echo Static demo requires no build",
+  "outputDirectory": "public-demo",
+  "cleanUrls": true,
+  "trailingSlash": false
+}

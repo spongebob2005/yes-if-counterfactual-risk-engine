@@ -1,0 +1,9 @@
+[theme]
+base = "light"
+primaryColor = "#07594F"
+backgroundColor = "#F3F7F6"
+secondaryBackgroundColor = "#FBFDFC"
+textColor = "#172335"
+font = "sans serif"
+# Distinct muted series colors keep the four policy curves readable.
+chartCategoricalColors = ["#07594F", "#3D6277", "#8A542E", "#6D5780"]
