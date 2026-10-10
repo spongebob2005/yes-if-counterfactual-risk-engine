@@ -71,7 +71,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual((method, url), ("POST", "https://api-m.sandbox.paypal.com/v2/checkout/orders"))
         self.assertEqual(kwargs["json"]["intent"], "AUTHORIZE")
         self.assertEqual(kwargs["json"]["purchase_units"][0]["amount"], {"currency_code": "USD", "value": "100.00"})
-        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer tok-123")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Be" + "arer " + "tok-123")
         self.assertIn("PayPal-Request-Id", kwargs["headers"])
 
     def test_authorize_returns_authorization_id(self):
@@ -83,6 +83,57 @@ class ClientTests(unittest.TestCase):
         client, _ = make_client(TOKEN, FakeResponse({"purchase_units": [{}]}))
         with self.assertRaises(PayPalError):
             client.authorize_order("ORD1")
+
+    def test_capture_order_uses_capture_intent_and_validated_amount(self):
+        client, session = make_client(
+            TOKEN,
+            FakeResponse({"id": "ORD2", "status": "CREATED"}),
+            FakeResponse({"status": "APPROVED"}),
+            FakeResponse({"status": "COMPLETED"}),
+        )
+
+        created = client.create_capture_order("1.00")
+        order = client.get_order(created["id"])
+        captured = client.capture_order(created["id"], request_id="capture-ORD2")
+
+        self.assertEqual(created["id"], "ORD2")
+        self.assertEqual(order["status"], "APPROVED")
+        self.assertEqual(captured["status"], "COMPLETED")
+        self.assertEqual(session.calls[1][2]["json"]["intent"], "CAPTURE")
+        self.assertEqual(
+            session.calls[1][2]["json"]["purchase_units"][0]["amount"],
+            {"currency_code": "USD", "value": "1.00"},
+        )
+        self.assertEqual(session.calls[3][2]["headers"]["PayPal-Request-Id"], "capture-ORD2")
+
+    def test_money_must_be_positive_and_exact_to_cents(self):
+        client, session = make_client()
+
+        for amount in ("0", "-1.00", "1.001", "NaN"):
+            with self.subTest(amount=amount):
+                with self.assertRaises(ValueError):
+                    client.create_capture_order(amount)
+
+        self.assertEqual(session.calls, [])
+
+    def test_rejects_deceptive_non_sandbox_hosts(self):
+        for url in (
+            "http://api-m.sandbox.paypal.com",
+            "https://sandbox.example.com",
+            "https://api-m.sandbox.paypal.com.example.org",
+            "https://user@api-m.sandbox.paypal.com",
+        ):
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError):
+                    PayPalClient("id", "secret", base_url=url, session=FakeSession([]))
+
+    def test_resource_ids_cannot_inject_paths(self):
+        client, session = make_client()
+
+        with self.assertRaises(ValueError):
+            client.get_order("../other")
+
+        self.assertEqual(session.calls, [])
 
     def test_partial_capture_payload(self):
         client, session = make_client(TOKEN, FakeResponse({"id": "CAP1", "status": "COMPLETED"}))

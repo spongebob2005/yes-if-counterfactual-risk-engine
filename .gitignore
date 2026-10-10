@@ -4,6 +4,7 @@ __pycache__/
 .streamlit/secrets.toml
 data/raw/
 data/processed/
+.data/
 /Counterfactual_Risk_Engine_Build_Plan.pdf
 
 # secrets (PayPal sandbox keys live here; never commit)

@@ -58,16 +58,34 @@ python -m scripts.prepare_ieee_data
 
 The script joins the files by `TransactionID`, sorts transactions chronologically, builds prior-only history features, and creates 60/15/10/15 train, validation, calibration, and test splits. Processed Parquet files and category levels are written to `data/processed/`; raw and processed data are excluded from version control.
 
+## PayPal sandbox checkout
+
+This adds a separate checkout page and FastAPI backend. It uses a fixed $1.00 demo item configured on the server, creates a PayPal order after the buyer clicks the sandbox button, then checks PayPal's approved order and amount before capture. The Streamlit risk dashboard remains a separate demo; its heuristic score does not affect or execute this payment.
+
+1. Create a PayPal developer app and use its **Sandbox** Client ID and Secret.
+2. Copy `.env.example` to `.env` and add the sandbox credentials. Never commit keys or use live credentials with this prototype.
+3. Install project dependencies and start the backend:
+
+```bash
+cp .env.example .env
+# Edit .env and add the sandbox Client ID and Secret
+python -m pip install -r requirements.txt
+uvicorn src.paypal.checkout_app:app --host 127.0.0.1 --port 8000
+```
+
+Open <http://localhost:8000/> and use a PayPal **sandbox personal** account to approve the test payment. The checkout records order status in `.data/checkout.sqlite3`, which is excluded from Git. Health endpoints are available at `/healthz` and `/readyz`.
+
+The separate terminal smoke test below remains available for trying the authorize/capture/void flow.
+
 ## Optional: PayPal sandbox smoke test
 
-The risk engine is designed to sit between PayPal order approval and payment capture. This standalone script exercises the PayPal **sandbox** flow it will control: create an order with intent `AUTHORIZE`, approve it as a sandbox buyer, authorize, then capture, partially capture, or void. It is not yet wired into the dashboard, and it only talks to the sandbox.
+This standalone script exercises the PayPal **sandbox** authorization flow: create an order with intent `AUTHORIZE`, approve it as a sandbox buyer, authorize, then capture, partially capture, or void. It is separate from both the sandbox checkout page and the dashboard, and it only talks to the sandbox.
 
 1. Create a free account at [developer.paypal.com](https://developer.paypal.com) and open **Apps & Credentials** in **Sandbox** mode.
 2. Copy `.env.example` to `.env` and fill in your sandbox Client ID and Secret. `.env` is git-ignored; never commit real keys.
-3. Install the extra dependencies and run:
+3. Run an action:
 
 ```bash
-python -m pip install requests python-dotenv
 python scripts/paypal_smoke_test.py --action partial   # capture 60% now; the rest stays authorized
 python scripts/paypal_smoke_test.py --action void      # void the authorization
 python scripts/paypal_smoke_test.py --action full      # capture in full
@@ -77,7 +95,7 @@ The script prints an approval link. Open it in a private window and sign in with
 
 ### How decisions map to PayPal calls
 
-The client lives in `src/paypal/client.py` (sandbox only; it refuses non-sandbox URLs) and the decision-to-call mapping in `src/paypal/gateway.py`. Orders must be created with intent `AUTHORIZE` so every option below stays available.
+The client lives in `src/paypal/client.py` (sandbox only; it refuses non-sandbox URLs) and the decision-to-call mapping in `src/paypal/gateway.py`. The smoke test uses orders with intent `AUTHORIZE` to exercise authorization, capture, and void.
 
 | Engine decision | PayPal / app behavior |
 | --- | --- |
@@ -88,7 +106,7 @@ The client lives in `src/paypal/client.py` (sandbox only; it refuses non-sandbox
 | HOLD | Leave the authorization uncaptured while the payment is reviewed |
 | BLOCK | Void the authorization |
 
-Step-up and hold are app-level behavior, not PayPal features. The PayPal calls are covered by mocked unit tests (`tests/test_paypal.py`); only the smoke test talks to the real sandbox.
+These action plans are illustrative and are not connected to the checkout capture endpoint. Step-up and hold are app-level behavior, not PayPal features. The PayPal calls are covered by mocked unit tests (`tests/test_paypal.py`); only the smoke test and sandbox checkout talk to PayPal.
 
 ## Run tests
 

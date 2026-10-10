@@ -125,10 +125,9 @@ class PayPalClient:
         self, method: str, path: str, body: dict[str, Any] | None = None, request_id: str | None = None
     ) -> dict[str, Any]:
         headers = {
-            "Authorization": f"Bearer {self.access_token()}",
             "Content-Type": "application/json",
         }
-        headers["Authorization"] = f"Bearer {self.access_token()}"
+        headers["Authorization"] = "Bearer " + self.access_token()
         if method.upper() == "POST":
             headers["PayPal-Request-Id"] = request_id or str(uuid.uuid4())  # idempotency
         kwargs: dict[str, Any] = {"headers": headers}

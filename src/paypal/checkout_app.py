@@ -214,6 +214,10 @@ def create_app(
         except (KeyError, IndexError, TypeError):
             if status == "COMPLETED":
                 logger.error("Completed PayPal capture response did not contain a capture id")
+                raise HTTPException(
+                    status_code=502,
+                    detail="PayPal returned an incomplete capture response.",
+                )
 
         try:
             with connect() as connection:
