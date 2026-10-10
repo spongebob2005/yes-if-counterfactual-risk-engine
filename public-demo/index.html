@@ -3,388 +3,661 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explore yes, if, a counterfactual payment-risk demo that explores lower-friction alternatives to a hard decline.">
-    <meta name="color-scheme" content="light dark">
-    <title>yes, if | Counterfactual payment risk demo</title>
+    <meta name="description" content="Explore the yes, if payment-risk dashboard using illustrative sample transactions.">
+    <meta name="color-scheme" content="light">
+    <title>yes, if | Payment risk dashboard</title>
     <style>
       :root {
         color-scheme: light dark;
         --page: #f3f7f6;
         --surface: #fbfdfc;
+        --surface-muted: #eaf1ef;
         --ink: #172335;
         --muted: #536575;
         --line: #d7e2df;
-        --accent: #0b927b;
-        --accent-dark: #07594f;
+        --accent: #07594f;
+        --accent-bright: #0b927b;
         --accent-soft: #e2f1ed;
         --accent-ink: #064b43;
-        --ambient: #e0efeb;
-        --code-surface: #eaf1ef;
-        --code-ink: #203239;
         --warning: #765311;
         --warning-soft: #fff5d9;
+        --danger: #8b3d34;
+        --danger-soft: #f9e9e6;
+        --chart-allow: #07594f;
+        --chart-static: #3d6277;
+        --chart-step: #8a542e;
+        --chart-adaptive: #6d5780;
         --radius-surface: 14px;
         --radius-control: 8px;
         font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
-        scroll-behavior: smooth;
+        background: var(--page);
+        color: var(--ink);
       }
       * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        background:
-          radial-gradient(ellipse at 86% 13%, var(--ambient) 0, transparent 28rem),
-          var(--page);
-        color: var(--ink);
-        line-height: 1.6;
+      body { margin: 0; min-height: 100dvh; background: var(--page); color: var(--ink); }
+      button, select, input { color: inherit; font: inherit; }
+      button, select, input[type="range"] { accent-color: var(--accent-bright); }
+      button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
+        outline: 3px solid var(--accent-bright);
+        outline-offset: 3px;
       }
       a { color: inherit; }
-      button, select { font: inherit; }
-      .wrap { width: min(1160px, calc(100% - 48px)); margin-inline: auto; }
-      .nav {
-        min-height: 74px;
+      .app-shell { min-height: 100dvh; display: grid; grid-template-columns: 236px minmax(0, 1fr); }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        height: 100dvh;
+        padding: 25px 17px 18px;
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .brand img { display: block; width: 142px; height: auto; }
+      .navigation { display: grid; gap: 5px; }
+      .nav-item {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        border-bottom: 1px solid var(--line);
-      }
-      .brand {
-        display: inline-flex;
-        align-items: center;
-        text-decoration: none;
-      }
-      .brand img { display: block; width: 156px; height: auto; }
-      .nav-links { display: flex; align-items: center; gap: 26px; }
-      .nav-links a { color: var(--muted); text-decoration: none; font-size: .94rem; }
-      .nav-links a:hover { color: var(--accent-dark); }
-      .button {
-        min-height: 46px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 18px;
-        border: 1px solid var(--accent-dark);
+        gap: 11px;
+        width: 100%;
+        min-height: 43px;
+        padding: 9px 11px;
+        border: 1px solid transparent;
         border-radius: var(--radius-control);
-        background: var(--accent-dark);
-        color: white;
-        font-weight: 700;
-        text-decoration: none;
-        white-space: nowrap;
-        transition: transform .2s cubic-bezier(.16, 1, .3, 1), background .2s ease;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        text-align: left;
       }
-      .button:hover { background: var(--accent-dark); transform: translateY(-1px); }
-      .button:active { transform: scale(.98); }
-      .button.secondary { background: transparent; color: var(--accent-dark); }
-      .button.secondary:hover { background: var(--accent-soft); }
-      :focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 3px; }
-      .hero {
-        min-height: min(760px, calc(100dvh - 74px));
-        padding: 52px 0 68px;
-        display: grid;
-        grid-template-columns: minmax(0, .94fr) minmax(420px, 1.06fr);
-        align-items: center;
-        gap: clamp(40px, 7vw, 100px);
+      .nav-item:hover { background: var(--surface-muted); color: var(--ink); }
+      .nav-item[aria-current="page"] {
+        border-color: #c7e3da;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-weight: 750;
       }
-      .eyebrow {
-        margin: 0 0 18px;
-        color: var(--accent-dark);
-        font-size: .78rem;
-        font-weight: 760;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-      }
-      h1 {
-        max-width: 560px;
-        margin: 0;
-        font-size: clamp(2.9rem, 5vw, 4.35rem);
-        letter-spacing: -.06em;
-        line-height: 1.02;
-      }
-      .lede { max-width: 440px; margin: 22px 0 27px; color: var(--muted); font-size: 1.08rem; line-height: 1.65; }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; }
-      .hero-entry { animation: enter .65s cubic-bezier(.16, 1, .3, 1) both; }
-      .hero-entry.demo { animation-delay: .09s; }
-      @keyframes enter {
-        from { opacity: 0; transform: translateY(14px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .demo {
-        position: relative;
-        padding: 28px;
+      .sidebar-note {
+        margin-top: auto;
+        padding: 14px;
         border: 1px solid var(--line);
-        border-radius: var(--radius-surface);
+        border-radius: var(--radius-control);
+        background: var(--page);
+      }
+      .sidebar-note strong { display: block; margin-bottom: 5px; font-size: .78rem; }
+      .sidebar-note p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+      .sidebar-footer { color: var(--muted); font-size: .75rem; text-decoration: none; }
+      .sidebar-footer:hover { color: var(--accent); }
+      .main { min-width: 0; }
+      .topbar {
+        display: flex;
+        min-height: 76px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 14px clamp(20px, 4vw, 52px);
+        border-bottom: 1px solid var(--line);
         background: var(--surface);
-        box-shadow: 0 24px 70px #193e3514;
       }
-      .demo::before {
-        position: absolute;
-        inset: 0 auto 0 0;
-        width: 4px;
-        border-radius: var(--radius-surface) 0 0 var(--radius-surface);
-        background: var(--accent);
-        content: "";
+      .topbar-title { font-size: .91rem; font-weight: 720; }
+      .topbar-caption { margin-top: 2px; color: var(--muted); font-size: .76rem; }
+      .topbar-actions { display: flex; align-items: center; gap: 13px; }
+      .sample-control { display: grid; gap: 4px; }
+      .sample-control label { color: var(--muted); font-size: .7rem; font-weight: 700; }
+      select {
+        min-height: 40px;
+        max-width: 330px;
+        padding: 7px 33px 7px 10px;
+        border: 1px solid #aabbb6;
+        border-radius: var(--radius-control);
+        background: var(--surface);
       }
-      .demo-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-      .demo h2 { margin: 0; font-size: 1.28rem; letter-spacing: -.035em; }
-      .sandbox-tag {
-        flex: none;
-        padding: 5px 8px;
+      .demo-badge {
+        padding: 7px 10px;
         border: 1px solid #bbdcd3;
         border-radius: var(--radius-control);
         background: var(--accent-soft);
         color: var(--accent-ink);
-        font-size: .68rem;
+        font-size: .69rem;
         font-weight: 800;
-        letter-spacing: .05em;
+        letter-spacing: .04em;
+        white-space: nowrap;
       }
-      .demo-caption { margin: 5px 0 18px; color: var(--muted); font-size: .86rem; }
-      .field-label { display: block; margin: 18px 0 7px; font-size: .8rem; font-weight: 750; }
-      select {
-        width: 100%;
-        min-height: 48px;
-        padding: 9px 12px;
-        border: 1px solid #aabbb6;
-        border-radius: var(--radius-control);
-        background: var(--surface);
-        color: var(--ink);
-      }
-      select:hover { border-color: var(--accent); }
-      .risk-row { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
-      .score { font-size: 2.7rem; font-weight: 760; letter-spacing: -.07em; line-height: 1; font-variant-numeric: tabular-nums; }
-      .action-label { margin-bottom: 3px; padding: 6px 9px; border-radius: var(--radius-control); background: var(--accent-soft); color: var(--accent-ink); font-size: .72rem; font-weight: 800; letter-spacing: .04em; }
-      .action-label[data-action="HIGH"], .action-label[data-action="VERY HIGH"] { background: var(--warning-soft); color: var(--warning); }
-      .signals-title { margin: 18px 0 7px; color: var(--muted); font-size: .73rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-      .signals { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
-      .signal { padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--muted); font-size: .75rem; }
-      .demo .button { width: 100%; margin-top: 19px; cursor: pointer; }
-      .result {
-        min-height: 88px;
-        margin-top: 14px;
-        padding: 14px 15px;
-        border: 1px solid #c7e3da;
-        border-radius: var(--radius-control);
-        background: var(--accent-soft);
-        color: var(--accent-ink);
-        font-size: .86rem;
-        line-height: 1.55;
-        transition: opacity .18s ease, transform .18s ease;
-      }
-      .result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-      .result-side { min-width: 0; }
-      .result-label { display: block; margin-bottom: 4px; font-size: .72rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-      .result-score { display: block; font-size: 1.8rem; font-weight: 780; letter-spacing: -.05em; line-height: 1.15; font-variant-numeric: tabular-nums; }
-      .result-band { display: block; margin-top: 2px; font-size: .77rem; }
-      .result-note { margin: 12px 0 0; font-size: .81rem; }
-      section.content-section { padding: 82px 0; border-top: 1px solid var(--line); }
-      section h2 { max-width: 650px; margin: 0; font-size: clamp(2rem, 4vw, 3.1rem); letter-spacing: -.05em; line-height: 1.08; }
-      .section-lede { max-width: 660px; margin: 15px 0 34px; color: var(--muted); }
-      .steps { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(240px, .85fr); gap: 0 52px; }
-      .step { padding: 18px 0 20px; border-top: 1px solid var(--line); }
-      .step:first-child { grid-row: span 2; padding-right: 25px; border-top: 2px solid var(--accent); }
-      .step:nth-child(2), .step:nth-child(3) { border-top: 1px solid var(--line); }
-      .step h3 { margin: 0 0 7px; font-size: 1.08rem; letter-spacing: -.02em; }
-      .step p { max-width: 420px; margin: 0; color: var(--muted); font-size: .94rem; }
-      .boundary {
-        margin-top: 30px;
-        padding: 17px 20px;
+      .content { width: min(1280px, 100%); margin-inline: auto; padding: 35px clamp(20px, 4vw, 52px) 54px; }
+      .page-heading { margin-bottom: 25px; }
+      .page-heading h1 { margin: 0; font-size: clamp(1.75rem, 3vw, 2.3rem); letter-spacing: -.045em; line-height: 1.15; }
+      .page-heading p { max-width: 66ch; margin: 9px 0 0; color: var(--muted); line-height: 1.55; }
+      .disclaimer {
+        margin-bottom: 23px;
+        padding: 12px 15px;
         border: 1px solid #d6c487;
         border-radius: var(--radius-control);
         background: var(--warning-soft);
         color: #58471e;
+        font-size: .84rem;
+        line-height: 1.5;
       }
-      .docs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: start; }
-      .doc-block { min-width: 0; }
-      .doc-block h3 { margin: 0 0 10px; font-size: 1.32rem; letter-spacing: -.03em; }
-      .doc-block p { color: var(--muted); }
-      pre {
-        overflow-x: auto;
-        padding: 17px 18px;
+      .disclaimer strong { color: inherit; }
+      .view { display: none; }
+      .view.active { display: block; animation: reveal .22s ease-out both; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @keyframes reveal { from { opacity: .55; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      .grid { display: grid; gap: 18px; }
+      .overview-grid { grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr); align-items: start; }
+      .panel {
+        min-width: 0;
+        padding: 21px;
         border: 1px solid var(--line);
-        border-radius: var(--radius-control);
-        background: var(--code-surface);
-        color: var(--code-ink);
-        font: .84rem/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+        border-radius: var(--radius-surface);
+        background: var(--surface);
+        box-shadow: 0 10px 28px rgb(20 53 46 / 4%);
       }
-      .doc-links { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 20px; }
-      .doc-links a { color: var(--accent-dark); font-weight: 700; }
-      footer { padding: 28px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem; }
+      .panel + .panel { margin-top: 17px; }
+      .panel-heading { margin: 0 0 15px; font-size: 1.02rem; letter-spacing: -.02em; }
+      .panel-kicker { color: var(--muted); font-size: .71rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+      .score-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 14px; margin-top: 17px; }
+      .score { font-size: clamp(2.7rem, 5vw, 3.5rem); font-weight: 780; letter-spacing: -.075em; line-height: 1; font-variant-numeric: tabular-nums; }
+      .score-caption { margin-top: 7px; color: var(--muted); font-size: .8rem; }
+      .action-pill { padding: 7px 11px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: .75rem; font-weight: 800; }
+      .action-pill[data-action="HOLD"] { background: var(--warning-soft); color: var(--warning); }
+      .action-pill[data-action="BLOCK"] { background: var(--danger-soft); color: var(--danger); }
+      .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 20px; }
+      .metric { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--page); }
+      .metric-label { display: block; color: var(--muted); font-size: .73rem; }
+      .metric-value { display: block; margin-top: 4px; font-size: 1rem; font-weight: 730; }
+      .signal-list, .plan-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+      .signal-list li, .plan-list li { padding: 12px 0; border-top: 1px solid var(--line); }
+      .signal-list li:first-child, .plan-list li:first-child { border-top: 0; }
+      .signal-row { display: flex; justify-content: space-between; gap: 15px; }
+      .signal-name { font-size: .88rem; font-weight: 650; }
+      .signal-weight { color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .snapshot-value { font-size: .92rem; font-weight: 690; text-align: right; }
+      .snapshot-list { display: grid; gap: 0; margin: 0; }
+      .snapshot-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 15px; padding: 11px 0; border-top: 1px solid var(--line); }
+      .snapshot-row:first-child { border-top: 0; }
+      .snapshot-row dt { color: var(--muted); font-size: .84rem; }
+      .snapshot-row dd { margin: 0; font-size: .84rem; font-weight: 680; text-align: right; }
+      .control-grid { grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr); align-items: start; }
+      .range-control { display: grid; gap: 9px; margin-top: 19px; }
+      .range-heading { display: flex; justify-content: space-between; gap: 15px; font-size: .83rem; font-weight: 650; }
+      .range-heading output { font-variant-numeric: tabular-nums; }
+      input[type="range"] { width: 100%; margin: 0; }
+      .range-bounds { display: flex; justify-content: space-between; color: var(--muted); font-size: .72rem; }
+      .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .comparison-cell { padding: 15px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--page); }
+      .comparison-cell.after { border-color: #bbdcd3; background: var(--accent-soft); }
+      .comparison-label { display: block; color: var(--muted); font-size: .75rem; }
+      .comparison-score { display: block; margin-top: 5px; font-size: 1.9rem; font-weight: 780; letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
+      .comparison-band { color: var(--muted); font-size: .78rem; }
+      .helper { margin: 14px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+      .ranked-options { margin-top: 18px; }
+      .option { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 15px 0; border-top: 1px solid var(--line); }
+      .rank { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: .78rem; font-weight: 750; }
+      .option-title { font-size: .89rem; font-weight: 730; }
+      .option-detail { margin-top: 4px; color: var(--muted); font-size: .79rem; line-height: 1.45; }
+      .option-result { color: var(--accent-ink); font-size: .8rem; font-weight: 750; text-align: right; white-space: nowrap; }
+      .plan-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+      .plan-amount { font-size: 1.4rem; font-weight: 760; font-variant-numeric: tabular-nums; }
+      .plan-step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+      .step-number { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: .75rem; font-weight: 740; }
+      .step-title { font-size: .87rem; font-weight: 730; }
+      .step-description { margin-top: 4px; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+      .call-tag { display: inline-block; margin-top: 7px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .67rem; font-weight: 750; text-transform: uppercase; }
+      .chart-panel { overflow: hidden; }
+      .chart-wrap { width: 100%; overflow-x: auto; }
+      .chart { display: block; width: 100%; min-width: 520px; height: auto; }
+      .chart text { fill: var(--muted); font: 12px "Aptos", "Segoe UI", system-ui, sans-serif; }
+      .chart .grid-line { stroke: var(--line); stroke-width: 1; }
+      .chart .series { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 12px; }
+      .legend-item { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
+      .legend-swatch { width: 17px; height: 3px; border-radius: 2px; }
+      .policy-list { display: grid; gap: 0; }
+      .policy-row { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; gap: 11px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+      .policy-row:first-child { border-top: 0; }
+      .policy-rank { color: var(--muted); font-size: .77rem; }
+      .policy-name { font-size: .83rem; font-weight: 650; }
+      .policy-cost { font-size: .83rem; font-weight: 740; font-variant-numeric: tabular-nums; }
       @media (max-width: 900px) {
-        .wrap { width: min(100% - 40px, 860px); }
-        .brand img { width: 128px; }
-        .hero { min-height: auto; padding: 42px 0 54px; grid-template-columns: 1fr; gap: 32px; }
-        .hero > div:first-child { max-width: 600px; }
+        .app-shell { grid-template-columns: 190px minmax(0, 1fr); }
+        .sidebar { padding-inline: 12px; }
+        .overview-grid { grid-template-columns: 1fr; }
+        .control-grid { grid-template-columns: 1fr; }
       }
-      @media (max-width: 760px) {
-        .wrap { width: min(100% - 32px, 600px); }
-        .nav { min-height: 64px; }
-        .nav-links { gap: 14px; }
-        .nav-links a:first-child { display: none; }
-        .demo { padding: 23px; }
-        section.content-section { padding: 58px 0; }
-        .steps { grid-template-columns: 1fr; gap: 0; }
-        .step:first-child { grid-row: auto; padding-right: 0; }
-        .docs-grid { grid-template-columns: minmax(0, 1fr); gap: 34px; }
+      @media (max-width: 680px) {
+        .app-shell { display: block; }
+        .sidebar { position: static; display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; height: auto; padding: 13px 16px 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+        .brand img { width: 118px; }
+        .navigation { display: flex; gap: 5px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+        .nav-item { width: auto; min-height: 38px; flex: none; padding: 7px 9px; font-size: .78rem; }
+        .nav-glyph { width: 20px; height: 20px; }
+        .sidebar-note, .sidebar-footer { display: none; }
+        .topbar { min-height: 68px; padding: 11px 16px; }
+        .topbar-caption { display: none; }
+        .demo-badge { font-size: .61rem; }
+        .topbar-actions { gap: 8px; }
+        .sample-control select { max-width: 200px; font-size: .78rem; }
+        .content { padding: 26px 16px 38px; }
+        .panel { padding: 17px; }
       }
-      @media (max-width: 420px) {
-        .brand img { width: 104px; }
-        .nav { gap: 8px; }
-        .nav-links a { font-size: .82rem; }
-        .nav-links { gap: 8px; }
-        .nav .button { min-height: 40px; padding-inline: 10px; font-size: .84rem; }
-        .demo-head { flex-direction: column; }
-        .actions { display: grid; }
-        .result-grid { gap: 10px; }
-        .result-score { font-size: 1.55rem; }
-      }
-      @media (max-width: 360px) {
-        .brand img { width: 84px; }
-        .nav-links { gap: 6px; }
-        .nav .button { padding-inline: 7px; }
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          color-scheme: dark;
-          --page: #101a20;
-          --surface: #17252c;
-          --ink: #edf5f2;
-          --muted: #b0c0c3;
-          --line: #2a3d42;
-          --accent: #65c6ae;
-          --accent-dark: #75d6bd;
-          --accent-soft: #193b36;
-          --accent-ink: #c5eee2;
-          --ambient: #172a2b;
-          --code-surface: #14232b;
-          --code-ink: #e4f1ed;
-          --warning: #f0cf7c;
-          --warning-soft: #3a3320;
-        }
-        .button { color: #0b1b1b; }
-        .button.secondary { color: var(--accent-dark); }
-        .boundary { color: #f0dfb0; border-color: #6d5a2b; }
-        .signals-title { color: var(--muted); }
-        .result { border-color: #28594f; }
-        .doc-links a { color: var(--accent-dark); }
-        :focus-visible { outline-color: var(--accent-dark); }
+      @media (max-width: 430px) {
+        .topbar { align-items: flex-start; flex-direction: column; gap: 8px; }
+        .topbar-actions { width: 100%; justify-content: space-between; }
+        .sample-control { min-width: 0; flex: 1; }
+        .sample-control select { width: 100%; max-width: none; }
+        .score-layout { grid-template-columns: 1fr; align-items: start; }
+        .action-pill { justify-self: start; }
+        .option { grid-template-columns: 28px minmax(0, 1fr); }
+        .option-result { grid-column: 2; text-align: left; }
       }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       }
+      :root {
+        color-scheme: light;
+        --page: #eef3f4;
+        --surface: #ffffff;
+        --surface-muted: #f2f7f6;
+        --ink: #142c35;
+        --muted: #5c7078;
+        --line: #d8e3e4;
+        --accent: #087b69;
+        --accent-bright: #087b69;
+        --accent-soft: #e4f3ee;
+        --accent-ink: #07584e;
+        --warning: #765311;
+        --warning-soft: #fff5d9;
+        --danger: #8b3d34;
+        --danger-soft: #f9e9e6;
+        --radius-surface: 16px;
+        --radius-control: 10px;
+      }
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --page: #101a20;
+        --surface: #17252c;
+        --surface-muted: #203239;
+        --ink: #edf5f2;
+        --muted: #b0c0c3;
+        --line: #2a3d42;
+        --accent: #75d6bd;
+        --accent-bright: #75d6bd;
+        --accent-soft: #193b36;
+        --accent-ink: #c5eee2;
+        --warning: #f0cf7c;
+        --warning-soft: #3a3320;
+        --danger: #ffc7bd;
+        --danger-soft: #382624;
+        --chart-allow: #75d6bd;
+        --chart-static: #80b9d0;
+        --chart-step: #edb47a;
+        --chart-adaptive: #c3a0e8;
+      }
+      [data-theme="dark"] .disclaimer { border-color: #6d5a2b; color: #f0dfb0; }
+      [data-theme="dark"] .comparison-cell.after { border-color: #28594f; }
+      .app-shell { grid-template-columns: 250px minmax(0, 1fr); }
+      .sidebar { gap: 34px; padding: 30px 18px 22px; }
+      .brand img { width: 154px; }
+      .navigation { gap: 7px; }
+      .nav-item {
+        min-height: 46px;
+        padding: 10px 12px;
+        font-size: .88rem;
+        font-weight: 620;
+        transition: background .18s ease, color .18s ease, transform .18s ease;
+      }
+      .nav-item:active { transform: scale(.985); }
+      .nav-item[aria-current="page"] {
+        border-color: transparent;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .sidebar-note { padding: 15px; border-color: #cfe4dd; background: #f2f8f6; }
+      [data-theme="dark"] .sidebar-note { border-color: var(--line); background: var(--surface-muted); }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        min-height: 80px;
+        padding-inline: clamp(24px, 4vw, 60px);
+        box-shadow: 0 1px 0 rgb(20 44 53 / 3%);
+      }
+      .topbar-title { font-size: 1rem; letter-spacing: -.015em; }
+      .topbar-caption { font-size: .8rem; }
+      .topbar-actions { gap: 10px; }
+      .content { width: min(1420px, 100%); padding: 42px clamp(24px, 4vw, 60px) 64px; }
+      .page-heading { margin-bottom: 27px; }
+      .page-heading h1 { font-size: clamp(2rem, 3vw, 2.7rem); letter-spacing: -.055em; }
+      .page-heading p { margin-top: 10px; font-size: .98rem; }
+      .disclaimer {
+        display: flex;
+        gap: 7px;
+        margin-bottom: 25px;
+        padding: 13px 16px;
+        border: 1px solid var(--line);
+        border-left: 4px solid #a8791c;
+        border-radius: var(--radius-control);
+        background: var(--surface);
+        color: var(--muted);
+      }
+      .disclaimer strong { color: var(--ink); }
+      .grid { gap: 20px; }
+      .overview-grid { grid-template-columns: minmax(0, 1.04fr) minmax(320px, .96fr); }
+      .panel {
+        padding: 23px;
+        border-color: var(--line);
+        box-shadow: 0 8px 24px rgb(20 53 46 / 3%);
+      }
+      .panel + .panel { margin-top: 18px; }
+      .panel-heading { font-size: 1.08rem; }
+      .panel-kicker { letter-spacing: .045em; }
+      .decision-panel {
+        padding: 25px;
+        border-color: #123f3a;
+        background: #123f3a;
+        color: #f2faf8;
+        box-shadow: 0 14px 32px rgb(18 63 58 / 12%);
+      }
+      .decision-panel .panel-kicker,
+      .decision-panel .score-caption,
+      .decision-panel .metric-label,
+      .decision-panel .helper { color: #c1d8d2; }
+      .decision-panel .metric {
+        border-color: rgb(255 255 255 / 15%);
+        background: rgb(255 255 255 / 7%);
+      }
+      .decision-panel .metric-value { color: #f2faf8; }
+      .score-layout { align-items: center; margin-top: 20px; }
+      .score-ring {
+        display: grid;
+        width: 150px;
+        flex: none;
+        aspect-ratio: 1;
+        place-items: center;
+        padding: 9px;
+        border-radius: 50%;
+        background: conic-gradient(#68cbb0 var(--score-angle, 0deg), rgb(255 255 255 / 16%) 0);
+        transition: background .3s ease;
+      }
+      .score-ring-inner {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        align-content: center;
+        justify-items: center;
+        border: 1px solid rgb(255 255 255 / 11%);
+        border-radius: 50%;
+        background: #123f3a;
+      }
+      .decision-panel .score { font-size: 3.3rem; }
+      .decision-panel .action-pill { background: #d7f5e8; color: #15483c; }
+      .decision-panel .action-pill[data-action="HOLD"] { background: #fff0c7; color: #60480d; }
+      .decision-panel .action-pill[data-action="BLOCK"] { background: #ffe1dc; color: #7e332b; }
+      .metric-grid { gap: 10px; margin-top: 22px; }
+      .metric { padding: 13px; }
+      .right-column { display: grid; gap: 18px; align-content: start; }
+      .right-column .panel + .panel { margin-top: 0; }
+      .recommendation-panel { border-left: 4px solid var(--accent); }
+      .recommendation-title { margin: 9px 0 5px; font-size: 1.2rem; letter-spacing: -.025em; }
+      .recommendation-detail { margin: 0; color: var(--muted); font-size: .87rem; line-height: 1.5; }
+      .counterfactual-preview {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .compare-side { min-width: 0; padding: 13px; border-radius: var(--radius-control); background: var(--surface-muted); }
+      .compare-side.after { border: 1px solid #bbdcd3; background: var(--accent-soft); }
+      .compare-label { display: block; color: var(--muted); font-size: .72rem; font-weight: 700; }
+      .compare-score { display: block; margin-top: 4px; font-size: 1.7rem; font-weight: 790; letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
+      .compare-action { display: block; margin-top: 2px; color: var(--muted); font-size: .71rem; }
+      .compare-arrow { color: var(--accent); font-size: 1.1rem; font-weight: 800; text-align: center; }
+      .snapshot-list { margin-top: 8px; }
+      .snapshot-row { padding: 10px 0; }
+      .theme-toggle {
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+        color: var(--ink);
+        cursor: pointer;
+        font-size: .78rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .theme-toggle:hover { border-color: var(--accent); background: var(--surface-muted); }
+      @media (max-width: 900px) {
+        .app-shell { grid-template-columns: 210px minmax(0, 1fr); }
+        .overview-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 680px) {
+        .topbar { position: static; }
+        .topbar-actions { flex-wrap: wrap; }
+        .theme-toggle { min-height: 38px; padding-inline: 9px; }
+        .content { padding: 30px 16px 42px; }
+        .decision-panel { padding: 20px; }
+        .score-ring { width: 126px; }
+        .decision-panel .score { font-size: 2.8rem; }
+      }
+      @media (max-width: 430px) {
+        .topbar-actions { align-items: stretch; }
+        .sample-control { flex-basis: calc(100% - 112px); }
+        .sample-control select { max-width: none; }
+        .demo-badge { align-self: end; }
+        .score-layout { grid-template-columns: minmax(0, 1fr) auto; }
+        .score-ring { width: 108px; }
+        .decision-panel .score { font-size: 2.35rem; }
+        .panel { padding: 17px; }
+      }
     </style>
   </head>
   <body>
-    <header class="wrap nav">
-      <a class="brand" href="#" aria-label="yes, if home">
-        <img src="/assets/yes-if_1-primary.png" alt="">
-      </a>
-      <nav class="nav-links" aria-label="Main navigation">
-        <a href="#how-it-works">How it works</a>
-        <a href="#run-it">Run it</a>
-        <a class="button secondary" href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine">View code</a>
-      </nav>
-    </header>
-
-    <main>
-      <div class="wrap hero">
-        <div class="hero-entry">
-          <p class="eyebrow">Counterfactual payment risk</p>
-          <h1>Risk is not always a hard no.</h1>
-          <p class="lede">Explore a low-friction condition that could make a risky-looking payment safer to accept.</p>
-          <div class="actions">
-            <a class="button" href="#demo">Try the demo</a>
-            <a class="button secondary" href="#run-it">Run it locally</a>
-          </div>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Dashboard navigation">
+        <a class="brand" href="/" aria-label="yes, if dashboard home">
+          <img src="/assets/yes-if_1-primary.png" alt="yes, if">
+        </a>
+        <nav class="navigation" aria-label="Dashboard workspaces">
+          <button class="nav-item" type="button" data-view="live" aria-current="page">Live decision</button>
+          <button class="nav-item" type="button" data-view="counterfactual">Counterfactual explorer</button>
+          <button class="nav-item" type="button" data-view="checkout">Checkout plan</button>
+          <button class="nav-item" type="button" data-view="policy">Policy battle</button>
+        </nav>
+        <div class="sidebar-note">
+          <strong>Illustrative prototype</strong>
+          <p>Scores use hand-written rules and synthetic transactions. No real payment data is used.</p>
         </div>
+        <a class="sidebar-footer" href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine">Project source and run guide</a>
+      </aside>
 
-        <section class="demo hero-entry" id="demo" aria-labelledby="demo-title">
-          <div class="demo-head">
-            <div>
-              <h2 id="demo-title">Explore a sample payment</h2>
-              <p class="demo-caption">Change the example and preview a possible condition.</p>
-            </div>
-            <span class="sandbox-tag">SAMPLE DATA ONLY</span>
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <div class="topbar-title">Payment risk workspace</div>
+            <div class="topbar-caption">Explore sample scenarios and possible next steps</div>
           </div>
-          <label class="field-label" for="transaction">Sample transaction</label>
-          <select id="transaction" name="transaction">
-            <option value="0">TXN-2048, $86.40, familiar activity</option>
-            <option value="1">TXN-3192, $1,240.00, multiple unusual signals</option>
-            <option value="2">TXN-5176, $318.75, some unusual signals</option>
-            <option value="3">TXN-6081, $42.10, familiar activity</option>
-          </select>
-          <div class="risk-row">
-            <div>
-              <div class="demo-caption">Illustrative risk score</div>
-              <div class="score" id="score" aria-live="polite">--</div>
+          <div class="topbar-actions">
+            <div class="sample-control">
+              <label for="transaction-picker">Sample transaction</label>
+              <select id="transaction-picker" name="transaction">
+                <option value="0">TXN-2048, $86.40</option>
+                <option value="1">TXN-3192, $1,240.00</option>
+                <option value="2" selected>TXN-5176, $318.75</option>
+                <option value="3">TXN-6081, $42.10</option>
+              </select>
             </div>
-            <span class="action-label" id="action">SAMPLE</span>
+            <span class="demo-badge">DEMO DATA</span>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme">Dark theme</button>
           </div>
-          <p class="signals-title">Signals in this sample</p>
-          <div class="signals" id="signals"><span class="signal">Select a sample to view signals</span></div>
-          <label class="field-label" for="condition">Explore a possible condition</label>
-          <select id="condition" name="condition">
-            <option value="verify">Ask for another verification</option>
-            <option value="wait">Wait 30 minutes, then reassess</option>
-            <option value="amount">Reduce the amount by 25%</option>
-          </select>
-          <button class="button" id="preview" type="button">Preview this condition</button>
-          <div class="result" id="result" role="status" aria-live="polite" aria-atomic="true">Choose a sample transaction and preview a condition to compare its illustrative score.</div>
-        </section>
-      </div>
+        </header>
 
-      <section class="content-section" id="how-it-works">
-        <div class="wrap">
-          <h2>From risk signal to next step.</h2>
-          <p class="section-lede">The concept explores alternatives to a simple approve-or-decline outcome. This prototype uses sample transactions and a hand-written score.</p>
-          <div class="steps">
-            <article class="step">
-              <h3>Start with the payment</h3>
-              <p>Review sample signals such as amount, timing, device, location, and recent activity.</p>
-            </article>
-            <article class="step">
-              <h3>Consider a condition</h3>
-              <p>Preview verification, a short wait, or a lower amount as a hypothetical intervention.</p>
-            </article>
-            <article class="step">
-              <h3>Review the scenario</h3>
-              <p>Compare the illustrative score. A simulated change is not evidence of reduced fraud.</p>
-            </article>
+        <div class="content">
+          <div class="disclaimer" role="note">
+            <strong>Demo only.</strong> Sample data and heuristic scores run in your browser. No payment is processed and no production risk decision is made.
           </div>
-          <div class="boundary"><strong>Demo limitation:</strong> the scores are not trained, calibrated, or validated. This page does not access payment data, call PayPal, or make payment decisions.</div>
+
+          <section class="view active" id="view-live" aria-labelledby="heading-live">
+            <div class="page-heading">
+              <h1 id="heading-live">Payment risk, with a way forward.</h1>
+              <p>See the decision, inspect its signals, and compare a lower-friction next step.</p>
+            </div>
+            <div class="grid overview-grid">
+              <div class="decision-column">
+                <article class="panel decision-panel" aria-labelledby="assessment-heading">
+                  <h2 class="sr-only" id="assessment-heading">Illustrative assessment</h2>
+                  <div class="panel-kicker">Risk assessment</div>
+                  <div class="score-layout">
+                    <div class="score-ring" id="score-ring">
+                      <div class="score-ring-inner">
+                        <div class="score" id="live-score" aria-live="polite">0%</div>
+                        <div class="score-caption">Risk score</div>
+                      </div>
+                    </div>
+                    <span class="action-pill" id="live-action">ALLOW</span>
+                  </div>
+                  <div class="metric-grid">
+                    <div class="metric"><span class="metric-label">Risk band</span><span class="metric-value" id="live-band">LOW</span></div>
+                    <div class="metric"><span class="metric-label">Sample amount</span><span class="metric-value" id="live-amount">$0.00</span></div>
+                  </div>
+                  <p class="helper">This hand-written score is not a calibrated probability.</p>
+                </article>
+                <article class="panel">
+                  <h2 class="panel-heading">Signals behind this result</h2>
+                  <ul class="signal-list" id="signal-list"></ul>
+                </article>
+              </div>
+              <div class="right-column">
+                <article class="panel recommendation-panel">
+                  <div class="panel-kicker">Lowest-friction next step</div>
+                  <h2 class="recommendation-title" id="recommendation-title">Review a possible condition</h2>
+                  <p class="recommendation-detail" id="recommendation-detail"></p>
+                  <div class="counterfactual-preview" aria-label="Illustrative before and after score comparison">
+                    <div class="compare-side">
+                      <span class="compare-label">Current</span>
+                      <strong class="compare-score" id="before-score"></strong>
+                      <span class="compare-action" id="before-action"></span>
+                    </div>
+                    <span class="compare-arrow" aria-hidden="true">→</span>
+                    <div class="compare-side after">
+                      <span class="compare-label">With condition</span>
+                      <strong class="compare-score" id="after-score"></strong>
+                      <span class="compare-action" id="after-action"></span>
+                    </div>
+                  </div>
+                  <p class="helper">Simulated change only. It does not estimate causal fraud reduction.</p>
+                </article>
+                <article class="panel">
+                  <div class="panel-kicker">Transaction snapshot</div>
+                  <h2 class="panel-heading" id="snapshot-id" style="margin-top:8px">TXN-5176</h2>
+                  <dl class="snapshot-list">
+                    <div class="snapshot-row"><dt>Time since previous</dt><dd id="snapshot-time"></dd></div>
+                    <div class="snapshot-row"><dt>Distance from usual location</dt><dd id="snapshot-distance"></dd></div>
+                    <div class="snapshot-row"><dt>Transactions in the last hour</dt><dd id="snapshot-velocity"></dd></div>
+                    <div class="snapshot-row"><dt>Device</dt><dd id="snapshot-device"></dd></div>
+                    <div class="snapshot-row"><dt>Region</dt><dd id="snapshot-region"></dd></div>
+                  </dl>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-counterfactual" aria-labelledby="heading-counterfactual">
+            <div class="page-heading">
+              <h1 id="heading-counterfactual">What would make this a yes?</h1>
+              <p>Change amount or timing, then compare the illustrative score and ranked lower-friction scenarios.</p>
+            </div>
+            <div class="grid control-grid">
+              <article class="panel">
+                <h2 class="panel-heading">Adjust the transaction</h2>
+                <label class="range-control" for="amount-range">
+                  <span class="range-heading"><span>Transaction amount</span><output id="amount-output" for="amount-range"></output></span>
+                  <input id="amount-range" type="range" min="0" max="2500" step="10">
+                  <span class="range-bounds"><span>$0</span><span id="amount-max-label">$2,500</span></span>
+                </label>
+                <label class="range-control" for="delay-range">
+                  <span class="range-heading"><span>Minutes since previous transaction</span><output id="delay-output" for="delay-range"></output></span>
+                  <input id="delay-range" type="range" min="0" max="120" step="1">
+                  <span class="range-bounds"><span>0 min</span><span>120 min</span></span>
+                </label>
+              </article>
+              <article class="panel">
+                <h2 class="panel-heading">Baseline and adjusted score</h2>
+                <div class="comparison-grid">
+                  <div class="comparison-cell">
+                    <span class="comparison-label">Sample baseline</span>
+                    <strong class="comparison-score" id="baseline-score"></strong>
+                    <span class="comparison-band" id="baseline-band"></span>
+                  </div>
+                  <div class="comparison-cell after">
+                    <span class="comparison-label">Adjusted score</span>
+                    <strong class="comparison-score" id="adjusted-score"></strong>
+                    <span class="comparison-band" id="adjusted-band"></span>
+                  </div>
+                </div>
+                <p class="helper">The adjustment changes only the illustrative amount and timing signals. It does not estimate causal fraud reduction.</p>
+              </article>
+            </div>
+            <article class="panel ranked-options">
+              <h2 class="panel-heading">Ranked “yes, if…” options</h2>
+              <p class="helper" style="margin-top:-7px;margin-bottom:8px">Sorted by simulated score reduction relative to assumed friction.</p>
+              <div id="option-list"></div>
+            </article>
+          </section>
+
+          <section class="view" id="view-checkout" aria-labelledby="heading-checkout">
+            <div class="page-heading">
+              <h1 id="heading-checkout">From decision to PayPal call.</h1>
+              <p>See a dry-run action plan for the selected sample. This preview never contacts PayPal.</p>
+            </div>
+            <article class="panel">
+              <div class="plan-summary">
+                <div><div class="panel-kicker">Suggested action</div><div class="metric-value" id="plan-action"></div></div>
+                <div class="plan-amount" id="plan-amount"></div>
+              </div>
+              <ol class="plan-list" id="plan-steps"></ol>
+              <p class="helper">Verification and hold steps are handled by an application. The actions shown here are explanations only and are not wired to the sandbox checkout.</p>
+            </article>
+          </section>
+
+          <section class="view" id="view-policy" aria-labelledby="heading-policy">
+            <div class="page-heading">
+              <h1 id="heading-policy">When conditions shift, friction matters.</h1>
+              <p>Compare fixed synthetic policy-cost curves. Lower is better only within this illustrative experiment.</p>
+            </div>
+            <div class="grid overview-grid">
+              <article class="panel chart-panel">
+                <h2 class="panel-heading">Cumulative simulated cost</h2>
+                <div class="chart-wrap">
+                  <svg class="chart" id="policy-chart" viewBox="0 0 760 340" role="img" aria-labelledby="chart-title chart-description">
+                    <title id="chart-title">Synthetic policy cost over 80 rounds</title>
+                    <desc id="chart-description">Four cumulative cost lines compare policies. Environment drift begins at round 45.</desc>
+                  </svg>
+                </div>
+                <div class="chart-legend" id="chart-legend" aria-label="Policy chart legend"></div>
+                <p class="helper">Assumed environment drift begins at round 45. The data is generated for demonstration only.</p>
+              </article>
+              <article class="panel">
+                <h2 class="panel-heading">End-of-run comparison</h2>
+                <div class="policy-list" id="policy-ranking"></div>
+              </article>
+            </div>
+          </section>
+
         </div>
-      </section>
-
-      <section class="content-section" id="run-it">
-        <div class="wrap docs-grid">
-          <div class="doc-block">
-            <h2>Run the project</h2>
-            <p>Start the interactive dashboard on your computer. Python 3.10 or newer is required.</p>
-            <pre><code>python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-streamlit run dashboard/app.py</code></pre>
-            <p>On Windows, activate with <code>.venv\Scripts\activate</code>. Streamlit prints the local URL.</p>
-            <div class="doc-links">
-              <a href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine/blob/main/README.md">Full setup guide</a>
-              <a href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine/tree/main/tests">View the tests</a>
-            </div>
-          </div>
-          <div class="doc-block">
-            <h3>PayPal sandbox checkout</h3>
-            <p>The separate checkout service demonstrates a fixed $1 sandbox purchase. It requires PayPal Developer sandbox credentials and does not use the risk score.</p>
-            <pre><code>cp .env.example .env
-# Add Sandbox Client ID and Secret to .env
-python -m pip install -r requirements.txt
-uvicorn src.paypal.checkout_app:app \
-  --host 127.0.0.1 --port 8000</code></pre>
-            <p>Open <code>http://localhost:8000/</code> and approve with a sandbox buyer account. This public page never asks for credentials.</p>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <div class="wrap">yes, if. A counterfactual payment-risk concept demo. No real payments or production risk decisions.</div>
-    </footer>
+      </main>
+    </div>
 
     <script>
       "use strict";
@@ -394,99 +667,269 @@ uvicorn src.paypal.checkout_app:app \
         { id: "TXN-5176", amount: 318.75, minutes: 18, distance: 840, newDevice: true, international: false, velocity: 3 },
         { id: "TXN-6081", amount: 42.10, minutes: 95, distance: 4, newDevice: false, international: false, velocity: 2 },
       ];
-      const transactionPicker = document.getElementById("transaction");
-      const scoreNode = document.getElementById("score");
-      const actionNode = document.getElementById("action");
-      const signalsNode = document.getElementById("signals");
-      const resultNode = document.getElementById("result");
+      const policies = [
+        { name: "Allow most", costs: [8.8, 3.8], color: "var(--chart-allow)" },
+        { name: "Static rules", costs: [6.7, 5.6], color: "var(--chart-static)" },
+        { name: "Step-up first", costs: [5.9, 5.2], color: "var(--chart-step)" },
+        { name: "Adaptive friction", costs: [5.5, 4.1], color: "var(--chart-adaptive)" },
+      ];
+      const picker = document.getElementById("transaction-picker");
+      const amountRange = document.getElementById("amount-range");
+      const delayRange = document.getElementById("delay-range");
+      const money = value => `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const percent = value => `${Math.round(value * 100)}%`;
 
-      function scoreTransaction(tx, amount = tx.amount, minutes = tx.minutes) {
+      function evaluate(transaction, amount = transaction.amount, minutes = transaction.minutes) {
         const factors = [
           ["High transaction amount", Math.min(Math.max(amount, 0) / 2000, 1) * 0.24],
-          ["New device", tx.newDevice ? 0.20 : 0],
-          ["International transaction", tx.international ? 0.12 : 0],
-          ["Unusual location distance", Math.min(Math.max(tx.distance, 0) / 5000, 1) * 0.18],
-          ["High transaction velocity", Math.min(Math.max(tx.velocity, 0) / 8, 1) * 0.21],
+          ["New device", transaction.newDevice ? 0.20 : 0],
+          ["International transaction", transaction.international ? 0.12 : 0],
+          ["Unusual location distance", Math.min(Math.max(transaction.distance, 0) / 5000, 1) * 0.18],
+          ["High transaction velocity", Math.min(Math.max(transaction.velocity, 0) / 8, 1) * 0.21],
           ["Short time since previous transaction", minutes <= 5 ? 0.15 : minutes <= 30 ? 0.08 : 0],
         ].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
-        return {
-          score: Math.min(0.98, 0.05 + factors.reduce((sum, [, value]) => sum + value, 0)),
-          factors,
-          signals: factors.filter(([, value]) => value >= 0.075),
-        };
+        return { score: Math.min(0.98, 0.05 + factors.reduce((sum, [, value]) => sum + value, 0)), factors };
       }
 
-      function riskBandFor(score) {
+      function actionFor(score) {
+        if (score < 0.24) return "ALLOW";
+        if (score < 0.48) return "STEP UP";
+        if (score < 0.70) return "HOLD";
+        return "BLOCK";
+      }
+
+      function bandFor(score) {
         if (score < 0.24) return "LOW";
         if (score < 0.48) return "MODERATE";
         if (score < 0.70) return "HIGH";
         return "VERY HIGH";
       }
 
-      function renderTransaction() {
-        const tx = transactions[Number(transactionPicker.value)];
-        const evaluated = scoreTransaction(tx);
-        scoreNode.textContent = `${Math.round(evaluated.score * 100)}%`;
-        actionNode.textContent = riskBandFor(evaluated.score);
-        actionNode.dataset.action = riskBandFor(evaluated.score);
-        signalsNode.replaceChildren();
-        const factors = evaluated.signals.slice(0, 3);
-        if (factors.length) {
-          for (const [name] of factors) {
-            const signal = document.createElement("span");
-            signal.className = "signal";
-            signal.textContent = name;
-            signalsNode.append(signal);
-          }
-        } else {
-          const signal = document.createElement("span");
-          signal.className = "signal";
-          signal.textContent = "No elevated signals";
-          signalsNode.append(signal);
-        }
-        resultNode.textContent = "Preview a condition to compare this sample's illustrative score.";
+      function appendText(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        node.textContent = text;
+        parent.append(node);
+        return node;
       }
 
-      document.getElementById("preview").addEventListener("click", () => {
-        const tx = transactions[Number(transactionPicker.value)];
-        const before = scoreTransaction(tx).score;
-        const condition = document.getElementById("condition").value;
-        let after;
-        let label;
-        if (condition === "verify") {
-          after = before * 0.55;
-          label = "A hypothetical verification";
-        } else if (condition === "wait") {
-          after = scoreTransaction(tx, tx.amount, 30).score;
-          label = "A hypothetical 30-minute wait";
-        } else {
-          after = scoreTransaction(tx, tx.amount * 0.75, tx.minutes).score;
-          label = "A hypothetical 25% amount reduction";
+      function renderLive(transaction) {
+        const { score, factors } = evaluate(transaction);
+        const action = actionFor(score);
+        document.getElementById("live-score").textContent = percent(score);
+        document.getElementById("score-ring").style.setProperty("--score-angle", `${score * 360}deg`);
+        document.getElementById("live-action").textContent = action;
+        document.getElementById("live-action").dataset.action = action;
+        document.getElementById("live-band").textContent = bandFor(score);
+        document.getElementById("live-amount").textContent = money(transaction.amount);
+        const recommendation = optionsFor(transaction)[0];
+        document.getElementById("recommendation-title").textContent = recommendation.label;
+        document.getElementById("recommendation-detail").textContent = recommendation.detail;
+        document.getElementById("before-score").textContent = percent(score);
+        document.getElementById("before-action").textContent = action;
+        document.getElementById("after-score").textContent = percent(recommendation.score);
+        document.getElementById("after-action").textContent = actionFor(recommendation.score);
+        document.getElementById("snapshot-id").textContent = transaction.id;
+        document.getElementById("snapshot-time").textContent = `${transaction.minutes} min`;
+        document.getElementById("snapshot-distance").textContent = `${transaction.distance.toLocaleString("en-US")} km`;
+        document.getElementById("snapshot-velocity").textContent = String(transaction.velocity);
+        document.getElementById("snapshot-device").textContent = transaction.newDevice ? "New" : "Known";
+        document.getElementById("snapshot-region").textContent = transaction.international ? "International" : "Domestic";
+        const list = document.getElementById("signal-list");
+        list.replaceChildren();
+        if (!factors.length) {
+          appendText(list, "li", "helper", "No elevated signals in this sample.");
+          return;
         }
-        const comparison = document.createElement("div");
-        comparison.className = "result-grid";
-        for (const [heading, score] of [["Before", before], ["After condition", after]]) {
-          const side = document.createElement("div");
-          side.className = "result-side";
-          const title = document.createElement("span");
-          title.className = "result-label";
-          title.textContent = heading;
-          const value = document.createElement("strong");
-          value.className = "result-score";
-          value.textContent = `${Math.round(score * 100)}%`;
-          const band = document.createElement("span");
-          band.className = "result-band";
-          band.textContent = riskBandFor(score);
-          side.append(title, value, band);
-          comparison.append(side);
+        for (const [name, weight] of factors.slice(0, 4)) {
+          const item = document.createElement("li");
+          const row = document.createElement("div");
+          row.className = "signal-row";
+          appendText(row, "span", "signal-name", name);
+          appendText(row, "span", "signal-weight", `Contribution ${percent(weight)}`);
+          item.append(row);
+          list.append(item);
         }
-        const note = document.createElement("p");
-        note.className = "result-note";
-        note.textContent = `${label}. Simulated result only, not evidence that this condition reduces real fraud.`;
-        resultNode.replaceChildren(comparison, note);
+      }
+
+      function optionsFor(transaction) {
+        const baseline = evaluate(transaction).score;
+        const options = [
+          { label: "Verify with a step-up", detail: "Add a one-time verification step.", score: baseline * 0.55, friction: 0.18 },
+          { label: "Wait 30 minutes", detail: "A short delay reduces the timing signal.", score: evaluate(transaction, transaction.amount, 30).score, friction: 0.08 },
+          { label: "Reduce the amount by 25%", detail: "Lower the transaction amount before retrying.", score: evaluate(transaction, transaction.amount * 0.75).score, friction: 0.06 },
+        ].map(option => ({ ...option, reduction: Math.max(0, baseline - option.score) }));
+        return options.sort((a, b) => b.reduction / b.friction - a.reduction / a.friction);
+      }
+
+      function renderExplorer(transaction) {
+        const maxAmount = Math.max(500, transaction.amount * 1.5);
+        amountRange.max = String(Math.ceil(maxAmount / 10) * 10);
+        document.getElementById("amount-max-label").textContent = money(Number(amountRange.max));
+        amountRange.value = String(Math.min(Number(amountRange.max), Math.max(0, transaction.amount)));
+        delayRange.value = String(Math.min(transaction.minutes, 120));
+        const update = () => {
+          const amount = Number(amountRange.value);
+          const delay = Number(delayRange.value);
+          const baseline = evaluate(transaction).score;
+          const adjusted = evaluate(transaction, amount, delay).score;
+          document.getElementById("amount-output").textContent = money(amount);
+          document.getElementById("delay-output").textContent = `${delay} min`;
+          document.getElementById("baseline-score").textContent = percent(baseline);
+          document.getElementById("baseline-band").textContent = bandFor(baseline);
+          document.getElementById("adjusted-score").textContent = percent(adjusted);
+          document.getElementById("adjusted-band").textContent = bandFor(adjusted);
+          const list = document.getElementById("option-list");
+          list.replaceChildren();
+          for (const [index, option] of optionsFor(transaction).entries()) {
+            const row = document.createElement("div");
+            row.className = "option";
+            appendText(row, "span", "rank", String(index + 1));
+            const description = document.createElement("div");
+            appendText(description, "div", "option-title", option.label);
+            appendText(description, "div", "option-detail", option.detail);
+            row.append(description);
+            appendText(row, "div", "option-result", `${percent(option.score)} score`);
+            list.append(row);
+          }
+        };
+        update();
+      }
+
+      function actionPlan(action, amount) {
+        const plans = {
+          "ALLOW": [["Capture", "Capture the full authorization.", `PayPal call | ${money(amount)}`]],
+          "STEP UP": [["Verify", "Ask the buyer for a one-time verification in the app.", "Our app"], ["Capture", "Capture in full after verification passes.", `PayPal call | ${money(amount)}`]],
+          "HOLD": [["Wait", "Leave the authorization uncaptured while the payment is reviewed.", "Our app"]],
+          "BLOCK": [["Void", "Void the authorization. Nothing is charged.", "PayPal call"]],
+        };
+        return plans[action];
+      }
+
+      function renderPlan(transaction) {
+        const score = evaluate(transaction).score;
+        const action = actionFor(score);
+        document.getElementById("plan-action").textContent = action;
+        document.getElementById("plan-amount").textContent = money(transaction.amount);
+        const list = document.getElementById("plan-steps");
+        list.replaceChildren();
+        for (const [index, [title, description, tag]] of actionPlan(action, transaction.amount).entries()) {
+          const item = document.createElement("li");
+          item.className = "plan-step";
+          appendText(item, "span", "step-number", String(index + 1));
+          const content = document.createElement("div");
+          appendText(content, "div", "step-title", title);
+          appendText(content, "div", "step-description", description);
+          appendText(content, "span", "call-tag", tag);
+          item.append(content);
+          list.append(item);
+        }
+      }
+
+      function policySeries() {
+        return policies.map((policy, index) => {
+          let cumulative = 0;
+          const values = [];
+          for (let round = 0; round < 80; round += 1) {
+            const base = round < 45 ? policy.costs[0] : policy.costs[1];
+            const wobble = (((round * (index + 3) + index * 7) % 11) - 5) * 0.11;
+            cumulative += Math.max(0.1, base + wobble);
+            values.push(Math.round(cumulative * 100) / 100);
+          }
+          return { ...policy, values };
+        });
+      }
+
+      function renderPolicy() {
+        const series = policySeries();
+        const svg = document.getElementById("policy-chart");
+        const plot = { left: 58, top: 20, width: 675, height: 260 };
+        const maxValue = Math.ceil(Math.max(...series.flatMap(item => item.values)) / 100) * 100;
+        const ns = "http://www.w3.org/2000/svg";
+        const make = (tag, attrs = {}) => {
+          const node = document.createElementNS(ns, tag);
+          for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+          return node;
+        };
+        for (let index = 0; index <= 4; index += 1) {
+          const y = plot.top + (plot.height * index) / 4;
+          const value = Math.round(maxValue * (1 - index / 4));
+          const gridLine = make("line", { x1: plot.left, y1: y, x2: plot.left + plot.width, y2: y, class: "grid-line" });
+          const label = make("text", { x: plot.left - 9, y: y + 4, "text-anchor": "end" });
+          label.textContent = String(value);
+          svg.append(gridLine, label);
+        }
+        for (const round of [0, 20, 40, 45, 60, 79]) {
+          const x = plot.left + (plot.width * round) / 79;
+          const label = make("text", { x, y: plot.top + plot.height + 25, "text-anchor": "middle" });
+          label.textContent = String(round + 1);
+          svg.append(label);
+        }
+        const driftX = plot.left + (plot.width * 45) / 79;
+        svg.append(make("line", { x1: driftX, y1: plot.top, x2: driftX, y2: plot.top + plot.height, stroke: "var(--warning)", "stroke-dasharray": "5 5", "stroke-width": 1.5 }));
+        const xLabel = make("text", { x: plot.left + plot.width / 2, y: 330, "text-anchor": "middle" });
+        xLabel.textContent = "Round";
+        svg.append(xLabel);
+        for (const item of series) {
+          const points = item.values.map((value, index) => {
+            const x = plot.left + (plot.width * index) / (item.values.length - 1);
+            const y = plot.top + plot.height * (1 - value / maxValue);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          }).join(" ");
+          svg.append(make("polyline", { points, class: "series", stroke: item.color }));
+        }
+        const legend = document.getElementById("chart-legend");
+        legend.replaceChildren();
+        for (const item of series) {
+          const entry = document.createElement("span");
+          entry.className = "legend-item";
+          const swatch = document.createElement("span");
+          swatch.className = "legend-swatch";
+          swatch.style.backgroundColor = item.color;
+          swatch.setAttribute("aria-hidden", "true");
+          entry.append(swatch, document.createTextNode(item.name));
+          legend.append(entry);
+        }
+        const ranking = document.getElementById("policy-ranking");
+        ranking.replaceChildren();
+        for (const [index, item] of [...series].sort((a, b) => a.values.at(-1) - b.values.at(-1)).entries()) {
+          const row = document.createElement("div");
+          row.className = "policy-row";
+          appendText(row, "span", "policy-rank", String(index + 1));
+          appendText(row, "span", "policy-name", item.name);
+          appendText(row, "span", "policy-cost", item.values.at(-1).toFixed(1));
+          ranking.append(row);
+        }
+      }
+
+      function renderAll() {
+        const transaction = transactions[Number(picker.value)];
+        renderLive(transaction);
+        renderExplorer(transaction);
+        renderPlan(transaction);
+      }
+
+      document.querySelectorAll(".nav-item").forEach(button => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.view;
+          document.querySelectorAll(".nav-item").forEach(item => item.removeAttribute("aria-current"));
+          button.setAttribute("aria-current", "page");
+          document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === `view-${target}`));
+        });
       });
-      transactionPicker.addEventListener("change", renderTransaction);
-      renderTransaction();
+      const themeToggle = document.getElementById("theme-toggle");
+      themeToggle.addEventListener("click", () => {
+        const isDark = document.documentElement.dataset.theme !== "dark";
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+        themeToggle.setAttribute("aria-pressed", String(isDark));
+        themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} theme`);
+        themeToggle.textContent = `${isDark ? "Light" : "Dark"} theme`;
+      });
+      picker.addEventListener("change", renderAll);
+      amountRange.addEventListener("input", () => renderExplorer(transactions[Number(picker.value)]));
+      delayRange.addEventListener("input", () => renderExplorer(transactions[Number(picker.value)]));
+      renderAll();
+      renderPolicy();
     </script>
   </body>
 </html>
