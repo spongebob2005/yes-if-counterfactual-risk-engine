@@ -22,12 +22,12 @@ This branded Streamlit prototype brings that idea to life with synthetic example
 
 ## Public demonstration page
 
-The Vercel demo is a single static dashboard at `/`. It includes the live decision view, counterfactual explorer, checkout plan, and policy comparison. The dashboard uses synthetic sample transactions and illustrative browser-side calculations. It has no payment credentials and does not call PayPal.
+The Vercel site serves a teaser landing page at `/` (live at https://yes-if-silk.vercel.app). The previous interactive dashboard is kept, unlinked, at `/dashboard`; it includes the live decision view, counterfactual explorer, checkout plan, and policy comparison. Both pages use synthetic sample transactions and illustrative browser-side calculations. It has no payment credentials and does not call PayPal.
 
 ### Deploy the demo page on Vercel
 
 1. Import this repository into your Vercel account. The project can remain private in GitHub; grant Vercel access to it during import.
-2. Keep the repository root as the project root. `vercel.json` sets the static output directory to `public-demo`.
+2. Keep the repository root as the project root. `vercel.json` sets the static output directory to `public-demo`, and `.vercelignore` limits uploads to that folder.
 3. Deploy. Vercel will provide a public URL for the dashboard.
 
 The live Streamlit app and PayPal sandbox backend are separate and are not deployed to Vercel. Never add PayPal credentials as Vercel variables for this demo.
