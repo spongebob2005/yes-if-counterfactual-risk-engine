@@ -27,4 +27,3 @@ data/processed/
 # secrets (PayPal sandbox keys live here; never commit)
 .env
 .env.*
-!.env.example

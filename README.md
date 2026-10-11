@@ -75,12 +75,10 @@ The script joins the files by `TransactionID`, sorts transactions chronologicall
 This adds a separate checkout page and FastAPI backend. It uses a fixed $1.00 demo item configured on the server, creates a PayPal order after the buyer clicks the sandbox button, then checks PayPal's approved order and amount before capture. The Streamlit risk dashboard remains a separate demo; its heuristic score does not affect or execute this payment.
 
 1. Create a PayPal developer app and use its **Sandbox** Client ID and Secret.
-2. Copy `.env.example` to `.env` and add the sandbox credentials. Never commit keys or use live credentials with this prototype.
+2. Create a local `.env` file with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. Never commit keys or use live credentials with this prototype.
 3. Install project dependencies and start the backend:
 
 ```bash
-cp .env.example .env
-# Edit .env and add the sandbox Client ID and Secret
 python -m pip install -r requirements.txt
 uvicorn src.paypal.checkout_app:app --host 127.0.0.1 --port 8000
 ```
@@ -94,7 +92,7 @@ The separate terminal smoke test below remains available for trying the authoriz
 This standalone script exercises the PayPal **sandbox** authorization flow: create an order with intent `AUTHORIZE`, approve it as a sandbox buyer, authorize, then capture, partially capture, or void. It is separate from both the sandbox checkout page and the dashboard, and it only talks to the sandbox.
 
 1. Create a free account at [developer.paypal.com](https://developer.paypal.com) and open **Apps & Credentials** in **Sandbox** mode.
-2. Copy `.env.example` to `.env` and fill in your sandbox Client ID and Secret. `.env` is git-ignored; never commit real keys.
+2. Create a local `.env` file with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. `.env` is git-ignored; never commit real keys.
 3. Run an action:
 
 ```bash
