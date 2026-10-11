@@ -7,7 +7,11 @@
     <meta name="description" content="yes, if turns risky payment declines into the smallest, lowest-friction path to approval. Coming soon.">
     <meta property="og:title" content="yes, if — The cheapest way to yes">
     <meta property="og:description" content="Don't just score risk. Find the cheapest way to yes. Coming soon.">
-    <meta property="og:image" content="/assets/yes-if_2-inverse.png">
+    <meta property="og:image" content="https://yes-if-silk.vercel.app/assets/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="theme-color" content="#0b111c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111a2a'/%3E%3Cg stroke-linecap='round' stroke-width='5'%3E%3Ccircle cx='22' cy='24' r='5.5' fill='none' stroke='%23eef2f6'/%3E%3Cpath d='M30 30 46 13M17 51 30 35' stroke='%23eef2f6'/%3E%3Cpath d='M27 29 39 39' stroke='%233fdcaa'/%3E%3C/g%3E%3Ccircle cx='42' cy='41' r='6' fill='%233fdcaa'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,7 +133,64 @@
       .pillar .n { font-family: var(--mono); font-size: .72rem; color: var(--mint); letter-spacing: .1em; }
       .pillar h2 { margin: 14px 0 8px; font-family: var(--display); font-weight: 700; font-size: 1.35rem; letter-spacing: -.02em; line-height: 1.2; }
       .pillar p { margin: 0; color: var(--muted); font-size: .94rem; max-width: 34ch; }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
       .blur { filter: blur(5px); user-select: none; }
+
+      .header-right { display: flex; align-items: center; gap: 12px; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px;
+        background: var(--mint); color: #062a20; font: 600 .92rem/1 var(--body);
+        text-decoration: none; cursor: pointer; white-space: nowrap;
+        transition: transform .15s, background-color .2s;
+      }
+      .btn:hover { background: #6be8c0; }
+      .btn:active { transform: scale(.97); }
+      .btn:disabled { opacity: .6; cursor: progress; }
+      .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); min-height: 36px; padding: 0 15px; font-size: .82rem; }
+      .btn-ghost:hover { background: rgba(238,242,246,.06); }
+      :focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+
+      .waitlist { margin-top: 34px; max-width: 470px; }
+      .waitlist-row {
+        display: flex; gap: 6px; padding: 6px;
+        border: 1px solid var(--line); border-radius: 999px; background: rgba(17, 26, 42, .75);
+        transition: border-color .2s;
+      }
+      .waitlist-row:focus-within { border-color: rgba(63,220,170,.5); }
+      .waitlist input[type="email"] {
+        flex: 1; min-width: 0; padding: 0 16px; border: 0; background: transparent;
+        color: var(--ink); font: 400 1rem var(--body); outline: none;
+      }
+      .waitlist input::placeholder { color: var(--dim); }
+      .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+      .waitlist-msg { min-height: 1.4em; margin: 10px 0 0 18px; font-size: .84rem; color: var(--muted); }
+      .waitlist-msg.ok { color: var(--mint); }
+      .waitlist-msg.err { color: var(--red); }
+      .waitlist.done .waitlist-row { border-color: rgba(63,220,170,.5); }
+      .soon .waitlist { margin: 36px auto 0; text-align: left; }
+
+      .how { padding-block: clamp(70px, 12vh, 120px) 20px; }
+      .section-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
+      .section-head h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 4.6vw, 3.4rem); letter-spacing: -.045em; line-height: 1; max-width: 16ch; }
+      .section-head p { margin: 0; max-width: 40ch; color: var(--muted); }
+      .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: step; }
+      .step {
+        position: relative; padding: 26px 24px 28px; border: 1px solid var(--line); border-radius: 20px;
+        background: rgba(17, 26, 42, .55); overflow: hidden;
+      }
+      .step-k { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
+      .step h3 { margin: 12px 0 8px; font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
+      .step p { margin: 0; color: var(--muted); font-size: .92rem; }
+      .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; font-family: var(--mono); font-size: .72rem; }
+      .chip { padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line); color: var(--muted); }
+      .chip.hot { color: var(--red); border-color: rgba(255,122,107,.3); background: rgba(255,122,107,.06); }
+      .chip.best { color: var(--mint); border-color: rgba(63,220,170,.35); background: rgba(63,220,170,.07); }
+      .chip.blur { filter: blur(4px); }
+
+      .reveal { opacity: 0; transform: translateY(18px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
+      .reveal.in { opacity: 1; transform: none; }
+      .no-js .reveal { opacity: 1; transform: none; }
 
       .soon { padding-block: clamp(70px, 12vh, 130px); text-align: center; }
       .soon p { margin: 0; font-family: var(--mono); font-size: .78rem; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
@@ -147,17 +208,21 @@
         .pillars { grid-template-columns: 1fr; }
         .pillar, .pillar + .pillar { padding: 28px 0; border-left: 0; }
         .pillar + .pillar { border-top: 1px solid var(--line); }
+        .flow { grid-template-columns: 1fr; }
       }
       @media (max-width: 480px) {
-        .status span { display: none; }
+        .status { display: none; }
+        .waitlist-row { flex-direction: column; border-radius: 18px; padding: 8px; }
+        .waitlist input[type="email"] { min-height: 44px; }
         .card { padding: 20px; }
         .txn-amt { font-size: 1.9rem; }
       }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation: none !important; transition: none !important; }
-        .rise { opacity: 1; transform: none; }
+        .rise, .reveal { opacity: 1; transform: none; }
       }
     </style>
+    <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body>
     <div class="wrap">
@@ -173,7 +238,10 @@
           </svg>
           <span>yes<b>,</b> if</span>
         </a>
-        <div class="status"><i></i><span>In development</span></div>
+        <div class="header-right">
+          <div class="status"><i></i><span>In development</span></div>
+          <a class="btn btn-ghost" href="#join">Join waitlist</a>
+        </div>
       </header>
 
       <main>
@@ -182,6 +250,17 @@
             <p class="eyebrow rise d1">The cheapest way to yes</p>
             <h1 class="rise d2">Not <span class="soft">no.</span><br>yes<span class="comma">,</span> if.</h1>
             <p class="lede rise d3">Risk engines stop at a score. We're building the next step: <strong>the smallest, lowest-friction change that turns a risky payment into an approval</strong> — instead of a lost customer.</p>
+            <div class="rise d4">
+            <form class="waitlist" data-waitlist novalidate>
+              <div class="waitlist-row">
+                <label class="sr-only" for="email-hero">Email address</label>
+                <input id="email-hero" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+                <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <button class="btn" type="submit">Get early access</button>
+              </div>
+              <p class="waitlist-msg" role="status"></p>
+            </form>
+            </div>
           </div>
 
           <div class="card rise d4" aria-live="polite">
@@ -203,26 +282,62 @@
         </section>
 
         <section class="pillars" aria-label="What's coming">
-          <div class="pillar rise d2">
+          <div class="pillar reveal">
             <div class="n">01 / COUNTERFACTUALS</div>
             <h2>Ask what would change the answer.</h2>
             <p>Every risky transaction gets a ranked list of <span class="blur">verify, hold, split</span> conditions that could flip it.</p>
           </div>
-          <div class="pillar rise d3">
+          <div class="pillar reveal">
             <div class="n">02 / FRICTION-AWARE</div>
             <h2>Cheapest path wins.</h2>
             <p>Options are weighed against the cost they put on a real customer — not just the risk they remove.</p>
           </div>
-          <div class="pillar rise d4">
+          <div class="pillar reveal">
             <div class="n">03 / CHECKOUT-NATIVE</div>
             <h2>From decision to checkout.</h2>
             <p>Designed to plug straight into a <span class="blur">PayPal checkout</span> flow. More soon.</p>
           </div>
         </section>
 
-        <section class="soon">
+        <section class="how" aria-labelledby="how-title">
+          <div class="section-head reveal">
+            <h2 id="how-title">Three steps from no to yes.</h2>
+            <p>A sneak peek at the engine. The full picture lands with early access.</p>
+          </div>
+          <div class="flow">
+            <div class="step reveal">
+              <div class="step-k">Step 1 · Score</div>
+              <h3>Spot the risk.</h3>
+              <p>Every payment is scored, and each signal behind the score is surfaced.</p>
+              <div class="chip-row"><span class="chip hot">new device</span><span class="chip hot">02:14 local</span><span class="chip">amount ×4</span></div>
+            </div>
+            <div class="step reveal">
+              <div class="step-k">Step 2 · Search</div>
+              <h3>Ask “what if?”</h3>
+              <p>The engine searches small changes that could flip the outcome.</p>
+              <div class="chip-row"><span class="chip">3-D Secure</span><span class="chip">hold 15m</span><span class="chip blur">split pay</span><span class="chip blur">address</span></div>
+            </div>
+            <div class="step reveal">
+              <div class="step-k">Step 3 · Ship</div>
+              <h3>Pick the cheapest yes.</h3>
+              <p>Ranked by risk removed per unit of customer friction, then sent to checkout.</p>
+              <div class="chip-row"><span class="chip best">yes, if verified · −0.61</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="soon reveal" id="join">
           <p>Coming soon</p>
           <h2>Fewer declines<span>.</span> More yes<span>,</span> ifs<span>.</span></h2>
+          <form class="waitlist" data-waitlist novalidate>
+              <div class="waitlist-row">
+                <label class="sr-only" for="email-footer">Email address</label>
+                <input id="email-footer" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+                <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <button class="btn" type="submit">Get early access</button>
+              </div>
+              <p class="waitlist-msg" role="status"></p>
+            </form>
         </section>
       </main>
 
@@ -271,6 +386,63 @@
           run(i + 1);
         }
         run(0);
+
+        const io = "IntersectionObserver" in window && !reduced
+          ? new IntersectionObserver((entries) => entries.forEach((e) => {
+              if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+            }), { threshold: .15 })
+          : null;
+        document.querySelectorAll(".reveal").forEach((el, i) => {
+          if (!io) return el.classList.add("in");
+          el.style.transitionDelay = (i % 3) * 90 + "ms";
+          io.observe(el);
+        });
+
+        const joined = () => { try { return localStorage.getItem("yesif-joined"); } catch { return null; } };
+        const markJoined = (form, text) => {
+          form.classList.add("done");
+          form.querySelector("button").textContent = "You're on the list";
+          form.querySelector("button").disabled = true;
+          const msg = form.querySelector(".waitlist-msg");
+          msg.className = "waitlist-msg ok";
+          msg.textContent = text;
+        };
+        document.querySelectorAll("[data-waitlist]").forEach((form) => {
+          if (joined()) markJoined(form, "Thanks — we'll be in touch.");
+          form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const msg = form.querySelector(".waitlist-msg");
+            const button = form.querySelector("button");
+            const email = form.email.value.trim();
+            if (!form.email.checkValidity() || !email) {
+              msg.className = "waitlist-msg err";
+              msg.textContent = "Please enter a valid email address.";
+              form.email.focus();
+              return;
+            }
+            button.disabled = true;
+            button.textContent = "Joining…";
+            msg.className = "waitlist-msg";
+            msg.textContent = "";
+            try {
+              const res = await fetch("/api/waitlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, company: form.company.value }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+              try { localStorage.setItem("yesif-joined", "1"); } catch {}
+              const text = data.alreadyJoined ? "You're already on the list — see you soon." : "You're in. We'll email you when early access opens.";
+              document.querySelectorAll("[data-waitlist]").forEach((f) => markJoined(f, text));
+            } catch (err) {
+              button.disabled = false;
+              button.textContent = "Get early access";
+              msg.className = "waitlist-msg err";
+              msg.textContent = err.message;
+            }
+          });
+        });
       })();
     </script>
   </body>
