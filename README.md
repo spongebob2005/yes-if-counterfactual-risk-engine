@@ -9,10 +9,18 @@
 <p align="center">
   <a href="https://yes-if-silk.vercel.app">Live site</a> ·
   <a href="https://yes-if-silk.vercel.app/app">Console</a> ·
-  <a href="https://yes-if-silk.vercel.app/docs">API docs</a>
+  <a href="https://yes-if-silk.vercel.app/docs">API docs</a> ·
+  <a href="docs/yes-if-story.mp4">Tutorial video</a>
 </p>
 
 ---
+
+## Tutorial and flowchart
+
+- **Tutorial video:** [`docs/yes-if-story.mp4`](docs/yes-if-story.mp4) walks through the product end to end.
+- **Flowchart:** how one risky payment becomes the cheapest path to yes, plus what runs where. The editable source is [`docs/yes-if-flow.excalidraw`](docs/yes-if-flow.excalidraw); open it at [excalidraw.com](https://excalidraw.com) to change it.
+
+![yes, if product decision flow and system architecture](docs/yes-if-flow.png)
 
 ## What it does
 
