@@ -1,0 +1,389 @@
+{
+ "version": 2,
+ "trained_at": "2026-10-12T04:25:46+00:00",
+ "data_source": "synthetic",
+ "deployed_model": "adversarially retrained",
+ "features": [
+  "TransactionAmt",
+  "dist1",
+  "log_amt",
+  "amt_ratio",
+  "hour",
+  "dow",
+  "since_last",
+  "prior_cnt",
+  "prior_mean_amt",
+  "card_device_prior",
+  "DeviceInfo_prior_cnt",
+  "DeviceInfo_distinct_uids",
+  "P_emaildomain_prior_cnt",
+  "P_emaildomain_distinct_uids",
+  "addr1_prior_cnt",
+  "addr1_distinct_uids",
+  "ProductCD",
+  "card4",
+  "card6",
+  "DeviceType",
+  "P_emaildomain"
+ ],
+ "levels": {
+  "ProductCD": [
+   "C",
+   "H",
+   "R",
+   "S",
+   "W"
+  ],
+  "card4": [
+   "american express",
+   "discover",
+   "mastercard",
+   "visa"
+  ],
+  "card6": [
+   "credit",
+   "debit"
+  ],
+  "DeviceType": [
+   "desktop",
+   "mobile"
+  ],
+  "P_emaildomain": [
+   "anonmail.net",
+   "aol.com",
+   "comcast.net",
+   "gmail.com",
+   "hotmail.com",
+   "icloud.com",
+   "mail.ru",
+   "outlook.com",
+   "protonmail.com",
+   "yahoo.com",
+   "yandex.ru"
+  ]
+ },
+ "thresholds": {
+  "tau_allow": 0.02857142857142857,
+  "tau_hold": 1.0,
+  "tau_block": 1.0
+ },
+ "defaults": {
+  "TransactionAmt": 62.85,
+  "TransactionDT": 4711506.0,
+  "dist1": 12.0,
+  "prior_cnt": 8.0,
+  "prior_mean_amt": 71.89882352941176,
+  "card_device_prior": 4.0,
+  "DeviceInfo_prior_cnt": 4.0,
+  "DeviceInfo_distinct_uids": 1.0,
+  "P_emaildomain_prior_cnt": 8123.0,
+  "P_emaildomain_distinct_uids": 918.0,
+  "addr1_prior_cnt": 5191.0,
+  "addr1_distinct_uids": 847.0,
+  "ProductCD": "W",
+  "card4": "visa",
+  "card6": "debit",
+  "DeviceType": "mobile",
+  "P_emaildomain": "gmail.com"
+ },
+ "email_stats": {
+  "anonmail.net": {
+   "P_emaildomain_prior_cnt": 760.0,
+   "P_emaildomain_distinct_uids": 433.0
+  },
+  "mail.ru": {
+   "P_emaildomain_prior_cnt": 960.0,
+   "P_emaildomain_distinct_uids": 543.0
+  },
+  "protonmail.com": {
+   "P_emaildomain_prior_cnt": 803.0,
+   "P_emaildomain_distinct_uids": 473.0
+  },
+  "comcast.net": {
+   "P_emaildomain_prior_cnt": 6189.0,
+   "P_emaildomain_distinct_uids": 227.0
+  },
+  "hotmail.com": {
+   "P_emaildomain_prior_cnt": 19465.0,
+   "P_emaildomain_distinct_uids": 713.0
+  },
+  "yahoo.com": {
+   "P_emaildomain_prior_cnt": 24935.0,
+   "P_emaildomain_distinct_uids": 918.0
+  },
+  "icloud.com": {
+   "P_emaildomain_prior_cnt": 16152.0,
+   "P_emaildomain_distinct_uids": 593.0
+  },
+  "yandex.ru": {
+   "P_emaildomain_prior_cnt": 953.0,
+   "P_emaildomain_distinct_uids": 555.0
+  },
+  "aol.com": {
+   "P_emaildomain_prior_cnt": 6534.0,
+   "P_emaildomain_distinct_uids": 238.0
+  },
+  "outlook.com": {
+   "P_emaildomain_prior_cnt": 16692.0,
+   "P_emaildomain_distinct_uids": 609.0
+  },
+  "gmail.com": {
+   "P_emaildomain_prior_cnt": 74415.0,
+   "P_emaildomain_distinct_uids": 2820.0
+  },
+  "__unknown__": {
+   "P_emaildomain_prior_cnt": 0.0,
+   "P_emaildomain_distinct_uids": 1.0
+  }
+ },
+ "counterfactual": {
+  "amt_mults": [
+   1.0,
+   0.9,
+   0.75,
+   0.5,
+   0.25,
+   0.1
+  ],
+  "delays_h": [
+   0,
+   1,
+   2,
+   4,
+   8,
+   12,
+   24
+  ],
+  "card6_opts": [
+   "debit",
+   "credit"
+  ],
+  "weights": {
+   "amt": 1.0,
+   "delay": 0.5,
+   "method": 0.3
+  },
+  "top_k": 3
+ },
+ "policy": {
+  "mode": "thompson",
+  "thompson": {
+   "kind": "thompson",
+   "catch": [
+    [
+     0.001,
+     20.001
+    ],
+    [
+     106.58653393593816,
+     72.8705712478078
+    ],
+    [
+     61.43845420789549,
+     10.553528671060759
+    ],
+    [
+     199.0863135205755,
+     5.076064197158226e-06
+    ]
+   ],
+   "abandon": [
+    [
+     0.001,
+     20.001
+    ],
+    [
+     4.759618525119435,
+     195.10505319872667
+    ],
+    [
+     12.672040450365142,
+     72.10955267200038
+    ],
+    [
+     55.627111641140466,
+     0.0008020760579717638
+    ]
+   ],
+   "fric": [
+    0.0,
+    2.0,
+    6.0,
+    10.0
+   ],
+   "margin": 0.1,
+   "gamma": 0.995,
+   "actions": [
+    "ALLOW",
+    "STEP_UP",
+    "HOLD",
+    "BLOCK"
+   ]
+  },
+  "bandit": {
+   "A": [
+    [
+     [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    [
+     [
+      232.35925303674344,
+      12.018937968829407,
+      10.117740793421232,
+      215.37651738501276
+     ],
+     [
+      12.018937968829407,
+      20.534171168662777,
+      19.234764996216647,
+      10.117740793421232
+     ],
+     [
+      10.117740793421232,
+      19.234764996216647,
+      20.21539628770885,
+      9.969002334397937
+     ],
+     [
+      215.37651738501276,
+      10.117740793421232,
+      9.969002334397937,
+      214.61198395105765
+     ]
+    ],
+    [
+     [
+      815.8971314866008,
+      2098.3987120376164,
+      236.21832049894442,
+      97.79683584934529
+     ],
+     [
+      2098.3987120376164,
+      18079.25088713429,
+      1877.3859128434012,
+      236.21832049894442
+     ],
+     [
+      236.21832049894442,
+      1877.3859128434012,
+      611.5556354138739,
+      83.61814395870029
+     ],
+     [
+      97.79683584934529,
+      236.21832049894442,
+      83.61814395870029,
+      43.41820338777642
+     ]
+    ],
+    [
+     [
+      692.0535727240638,
+      2230.6447889032365,
+      2162.6829395534737,
+      666.905488791352
+     ],
+     [
+      2230.6447889032365,
+      10614.317924470064,
+      10071.200300946191,
+      2162.6829395534737
+     ],
+     [
+      2162.6829395534737,
+      10071.200300946191,
+      9710.49888316404,
+      2116.668369807135
+     ],
+     [
+      666.905488791352,
+      2162.6829395534737,
+      2116.668369807135,
+      654.5174587866295
+     ]
+    ]
+   ],
+   "b": [
+    [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -10.743841563797822,
+     -19.328829029131047,
+     -19.289194239549673,
+     -10.396047346120296
+    ],
+    [
+     -119.80054430584043,
+     -1111.7177045397134,
+     -132.8966655838473,
+     -18.998633489445968
+    ],
+    [
+     -81.54802590419379,
+     -329.71148864919087,
+     -287.34161657454,
+     -75.1586363841742
+    ]
+   ],
+   "alpha": 0.1,
+   "gamma": 0.999
+  },
+  "sim": {
+   "ALLOW": {
+    "fric": 0.0,
+    "catch": 0.0,
+    "abandon": 0.0
+   },
+   "STEP_UP": {
+    "fric": 2.0,
+    "catch": 0.85,
+    "abandon": 0.03
+   },
+   "HOLD": {
+    "fric": 6.0,
+    "catch": 0.9,
+    "abandon": 0.15
+   },
+   "BLOCK": {
+    "fric": 10.0,
+    "catch": 1.0,
+    "abandon": 1.0
+   }
+  },
+  "margin": 0.1
+ },
+ "metrics": {
+  "pr_auc": 0.8815,
+  "roc_auc": 0.9718,
+  "recall_at_1pct_fpr": 0.8598,
+  "ece": 0.0013
+ }
+}

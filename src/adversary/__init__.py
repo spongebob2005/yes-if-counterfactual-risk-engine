@@ -1,0 +1,1 @@
+"""Adversary loop (M6)."""

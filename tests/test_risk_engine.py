@@ -1,57 +1,56 @@
+import json
 import unittest
 
-from risk_engine import (
-    SAMPLE_TRANSACTIONS,
-    action_for_score,
-    counterfactual_options,
-    policy_cost_series,
-    score_transaction,
-)
+import numpy as np
+
+from risk_engine import GUIDANCE, MODELS_DIR, RiskEngine
 
 
 class RiskEngineTests(unittest.TestCase):
-    def test_score_is_bounded_and_explains_positive_signals(self):
-        transaction = SAMPLE_TRANSACTIONS[1]
-        score, factors = score_transaction(transaction)
+    """Runs against the committed artifacts in models/ (regenerate with src.experiments.run_all)."""
 
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 0.98)
-        self.assertTrue(factors)
-        self.assertEqual(factors, sorted(factors, key=lambda item: item[1], reverse=True))
+    @classmethod
+    def setUpClass(cls):
+        cls.engine = RiskEngine.load()
+        cls.samples = {s["key"]: s for s in json.loads((MODELS_DIR / "samples.json").read_text())}
 
-    def test_amount_and_delay_adjustments_are_applied(self):
-        transaction = SAMPLE_TRANSACTIONS[1]
-        baseline, _ = score_transaction(transaction)
-        reduced_amount, _ = score_transaction(transaction, amount=100)
-        longer_delay, _ = score_transaction(transaction, minutes_since_last=90)
+    def decide(self, key, view="analyst"):
+        return self.engine.decide(self.samples[key]["transaction"], view)
 
-        self.assertLess(reduced_amount, baseline)
-        self.assertLess(longer_delay, baseline)
+    def test_clean_purchase_is_allowed_and_known_fraud_is_blocked(self):
+        self.assertEqual(self.decide("clean")["action"], "ALLOW")
+        for key in ("ring", "suspicious", "testing"):
+            self.assertIn(self.decide(key)["action"], ("HOLD", "BLOCK"), key)
 
-    def test_actions_follow_score_bands(self):
-        self.assertEqual(action_for_score(0.10), "ALLOW")
-        self.assertEqual(action_for_score(0.30), "STEP UP")
-        self.assertEqual(action_for_score(0.60), "HOLD")
-        self.assertEqual(action_for_score(0.80), "BLOCK")
+    def test_user_view_hides_scores_and_counterfactuals(self):
+        user = self.decide("borderline", "user")
+        self.assertEqual(set(user), {"action", "guidance"})
+        self.assertEqual(user["guidance"], GUIDANCE[user["action"]])
 
-    def test_counterfactual_options_are_ranked_by_reduction_per_friction(self):
-        options = counterfactual_options(SAMPLE_TRANSACTIONS[1])
-        ratios = [
-            float(option["reduction"]) / float(option["friction"])
-            for option in options
-        ]
+    def test_counterfactuals_bring_risk_under_the_allow_line(self):
+        result = self.decide("large")
+        self.assertNotEqual(result["action"], "ALLOW")
+        self.assertTrue(result["counterfactuals"])
+        for option in result["counterfactuals"]:
+            self.assertLess(option["risk"], self.engine.thresholds["tau_allow"])
+            self.assertTrue(option["label"].startswith("yes, if "))
 
-        self.assertEqual(ratios, sorted(ratios, reverse=True))
-        self.assertEqual(len(options), 3)
+    def test_paying_less_never_raises_risk(self):
+        tx = self.engine.complete(self.samples["large"]["transaction"])
+        rows = [dict(tx, TransactionAmt=tx["TransactionAmt"] * m) for m in (1.0, 0.75, 0.5, 0.25, 0.1)]
+        risks = self.engine.score(rows)
+        self.assertTrue(np.all(np.diff(risks) <= 1e-12), risks)
 
-    def test_policy_curves_have_drift_experiment_shape(self):
-        curves = policy_cost_series(rounds=80, drift_round=45)
+    def test_missing_history_is_filled_from_training_defaults(self):
+        full = self.engine.complete({"TransactionAmt": 50.0, "TransactionDT": 15 * 3600, "card6": "debit"})
+        self.assertIsNone(full["prev_dt"])
+        self.assertIsNotNone(full["prior_mean_amt"])
+        self.assertIn(self.engine.decide(full)["action"], GUIDANCE)
 
-        self.assertEqual(set(curves), {
-            "Allow most", "Static rules", "Step-up first", "Adaptive friction"
-        })
-        self.assertTrue(all(len(values) == 80 for values in curves.values()))
-        self.assertTrue(all(values[-1] > values[0] for values in curves.values()))
+    def test_reasons_are_plain_language(self):
+        reasons = self.decide("ring")["top_reasons"]
+        self.assertEqual(reasons[0]["reason"], "Cards sharing this device")
+        self.assertEqual(reasons[0]["direction"], "raises")
 
 
 if __name__ == "__main__":

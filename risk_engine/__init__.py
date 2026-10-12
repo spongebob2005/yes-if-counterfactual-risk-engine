@@ -1,124 +1,142 @@
-"""Illustrative payment-risk scoring for the demo dashboard."""
+"""yes, if: the decision layer on top of a calibrated fraud detector.
 
-from dataclasses import dataclass
+`RiskEngine` loads the artifacts written by `python -m src.experiments.run_all` (models/)
+and answers one question per payment: allow, step up, hold or block, and if not allow,
+what is the cheapest change that would make the model say yes. Numpy only at runtime.
+"""
 
+from __future__ import annotations
 
-@dataclass(frozen=True)
-class Transaction:
-    transaction_id: str
-    amount: float
-    minutes_since_last: int
-    distance_km: float
-    new_device: bool
-    international: bool
-    velocity_1h: int
+import json
+from collections.abc import Mapping, Sequence
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
+import numpy as np
 
-SAMPLE_TRANSACTIONS = (
-    Transaction("TXN-2048", 86.40, 240, 12, False, False, 1),
-    Transaction("TXN-3192", 1240.00, 3, 4120, True, True, 7),
-    Transaction("TXN-5176", 318.75, 18, 840, True, False, 3),
-    Transaction("TXN-6081", 42.10, 95, 4, False, False, 2),
+from src.counterfactual.search import counterfactuals, describe
+from src.data.core import FEATURES, LABELS, feature_matrix, rows_to_columns
+from src.models.serving import RiskModel
+from src.policy.bandit import LinUCB, ThompsonFriction, context
+from src.policy.simulator import ACTIONS
+
+MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
+
+GUIDANCE = {
+    "ALLOW": "Approved.",
+    "STEP_UP": "Additional verification is needed to complete this payment.",
+    "HOLD": "This payment is being reviewed. You'll hear back shortly.",
+    "BLOCK": "This payment couldn't be approved.",
+}
+
+# Raw transaction fields; anything missing is filled from training-set defaults.
+RAW_FIELDS = (
+    "TransactionAmt", "TransactionDT", "ProductCD", "card4", "card6", "dist1", "P_emaildomain",
+    "DeviceType", "prior_cnt", "prior_mean_amt", "prev_dt", "card_device_prior",
+    "DeviceInfo_prior_cnt", "DeviceInfo_distinct_uids", "P_emaildomain_prior_cnt",
+    "P_emaildomain_distinct_uids", "addr1_prior_cnt", "addr1_distinct_uids",
 )
 
-def score_transaction(
-    transaction: Transaction,
-    *,
-    amount: float | None = None,
-    minutes_since_last: int | None = None,
-) -> tuple[float, list[tuple[str, float]]]:
-    """Return an uncalibrated illustrative score and its heuristic factors."""
-    evaluated_amount = transaction.amount if amount is None else amount
-    elapsed_minutes = (
-        transaction.minutes_since_last
-        if minutes_since_last is None
-        else minutes_since_last
-    )
 
-    factors = [
-        ("High transaction amount", min(max(evaluated_amount, 0) / 2000, 1) * 0.24),
-        ("New device", 0.20 if transaction.new_device else 0.0),
-        ("International transaction", 0.12 if transaction.international else 0.0),
-        ("Unusual location distance", min(max(transaction.distance_km, 0) / 5000, 1) * 0.18),
-        ("High transaction velocity", min(max(transaction.velocity_1h, 0) / 8, 1) * 0.21),
-        (
-            "Short time since previous transaction",
-            0.15 if elapsed_minutes <= 5 else 0.08 if elapsed_minutes <= 30 else 0.0,
-        ),
-    ]
-    score = min(0.98, 0.05 + sum(value for _, value in factors))
-    return score, sorted(
-        ((name, value) for name, value in factors if value > 0),
-        key=lambda item: item[1],
-        reverse=True,
-    )
+class RiskEngine:
+    def __init__(self, model: RiskModel, meta: dict[str, Any]):
+        self.model = model
+        self.meta = meta
+        self.features = tuple(meta["features"])
+        self.levels = meta["levels"]
+        self.thresholds = meta["thresholds"]
+        policy = meta["policy"]
+        self.bandit = LinUCB.from_state(policy["bandit"]) if policy.get("bandit") else None
+        self.learned = ThompsonFriction.from_state(policy["thompson"]) if policy.get("thompson") else None
+        self.policy_mode = policy["mode"]
 
-def action_for_score(score: float) -> str:
-    if score < 0.24:
-        return "ALLOW"
-    if score < 0.48:
-        return "STEP UP"
-    if score < 0.70:
-        return "HOLD"
-    return "BLOCK"
+    @classmethod
+    def load(cls, directory: str | Path = MODELS_DIR) -> "RiskEngine":
+        directory = Path(directory)
+        meta = json.loads((directory / "engine.json").read_text(encoding="utf-8"))
+        return cls(RiskModel.load(directory / "detector.npz"), meta)
 
+    # -- inputs ------------------------------------------------------------
+    def complete(self, tx: Mapping[str, Any]) -> dict[str, Any]:
+        """Fill missing history/graph fields: per email domain if known, else training medians."""
+        out = {key: tx.get(key) for key in RAW_FIELDS}
+        domain = out.get("P_emaildomain") or self.meta["defaults"]["P_emaildomain"]
+        out["P_emaildomain"] = domain
+        per_domain = self.meta["email_stats"].get(str(domain), self.meta["email_stats"]["__unknown__"])
+        for key, value in per_domain.items():
+            if out.get(key) is None:
+                out[key] = value
+        for key, value in self.meta["defaults"].items():
+            if out.get(key) is None and key != "prev_dt":
+                out[key] = value
+        return out
 
-def counterfactual_options(transaction: Transaction) -> list[dict[str, float | str]]:
-    """Rank simple, simulated mitigations by score reduction per friction unit."""
-    original_score, _ = score_transaction(transaction)
-    candidates = [
-        (
-            "Verify with a step-up",
-            "Add a one-time verification step.",
-            original_score * 0.55,
-            0.18,
-        ),
-        (
-            "Wait 30 minutes",
-            "A short delay reduces the timing signal.",
-            score_transaction(transaction, minutes_since_last=30)[0],
-            0.08,
-        ),
-        (
-            "Reduce the amount by 25%",
-            "Lower the transaction amount before retrying.",
-            score_transaction(transaction, amount=transaction.amount * 0.75)[0],
-            0.06,
-        ),
-    ]
-    options = [
-        {
-            "action": label,
-            "detail": detail,
-            "score": score,
-            "reduction": max(0.0, original_score - score),
-            "friction": friction,
+    # -- scoring -----------------------------------------------------------
+    def matrix(self, rows: Sequence[Mapping[str, Any]]) -> np.ndarray:
+        return feature_matrix(rows_to_columns(rows), self.levels, self.features)
+
+    def score(self, rows: Sequence[Mapping[str, Any]]) -> np.ndarray:
+        return self.model.predict(self.matrix(rows))
+
+    def explain(self, tx: Mapping[str, Any], k: int = 5) -> list[dict[str, Any]]:
+        """Top reasons, as path contributions to the model's log-odds grouped by plain label."""
+        contrib, _ = self.model.trees.contributions(self.matrix([tx]), len(self.features))
+        grouped: dict[str, float] = {}
+        for name, value in zip(self.features, contrib[0]):
+            label = str(LABELS.get(name, name))
+            grouped[label] = grouped.get(label, 0.0) + float(value)
+        top = sorted(grouped.items(), key=lambda item: abs(item[1]), reverse=True)[:k]
+        return [{"reason": label, "impact": round(value, 3), "direction": "raises" if value > 0 else "lowers"}
+                for label, value in top]
+
+    def choose_action(self, risk: float, tx: Mapping[str, Any]) -> str:
+        """Thresholds bound the decision; inside the review band the learned policy picks the friction."""
+        t = self.thresholds
+        if risk < t["tau_allow"]:
+            return "ALLOW"
+        if risk >= t["tau_block"]:
+            return "BLOCK"
+        friction_only = np.array([False, True, True, True])
+        if self.policy_mode == "thompson" and self.learned is not None:
+            return ACTIONS[self.learned.choose(risk, float(tx["TransactionAmt"]), friction_only)]
+        if self.policy_mode == "bandit" and self.bandit is not None:
+            x = context(risk, float(tx["TransactionAmt"]))
+            return ACTIONS[self.bandit.choose(x, allowed=friction_only, alpha=0.0)]
+        return "STEP_UP" if risk < t["tau_hold"] else "HOLD"
+
+    def counterfactuals(self, tx: Mapping[str, Any], k: int | None = None) -> list[dict[str, Any]]:
+        cfg = self.meta["counterfactual"]
+        return counterfactuals(tx, self.score, self.thresholds["tau_allow"], cfg, k or cfg.get("top_k", 3))
+
+    def decide(self, tx: Mapping[str, Any], view: str = "user") -> dict[str, Any]:
+        """Analysts see the score, reasons and exact counterfactuals; users see coarse guidance only."""
+        full = self.complete(tx)
+        risk = float(self.score([full])[0])
+        action = self.choose_action(risk, full)
+        if view != "analyst":
+            return {"action": action, "guidance": GUIDANCE[action]}
+        options = [] if action == "ALLOW" else self.counterfactuals(full)
+        return {
+            "action": action,
+            "guidance": GUIDANCE[action],
+            "risk": round(risk, 4),
+            "thresholds": self.thresholds,
+            "top_reasons": self.explain(full),
+            "counterfactuals": [
+                {"label": "yes, if " + describe(o["change"], full["card6"]),
+                 "change": o["change"], "kind": list(o["kind"]), "risk": round(o["risk"], 4),
+                 "cost": round(o["cost"], 3), "plausible": o["plausible"],
+                 "amount": o["transaction"]["TransactionAmt"]}
+                for o in options
+            ],
+            "transaction": full,
         }
-        for label, detail, score, friction in candidates
-    ]
-    return sorted(
-        options,
-        key=lambda option: float(option["reduction"]) / float(option["friction"]),
-        reverse=True,
-    )
 
 
-def policy_cost_series(rounds: int = 80, drift_round: int = 45) -> dict[str, list[float]]:
-    """Return fixed, synthetic cost curves with an illustrative drift point."""
-    policies = {
-        "Allow most": (8.8, 3.8),
-        "Static rules": (6.7, 5.6),
-        "Step-up first": (5.9, 5.2),
-        "Adaptive friction": (5.5, 4.1),
-    }
-    curves: dict[str, list[float]] = {}
-    for index, (policy, (before, after)) in enumerate(policies.items()):
-        cumulative = 0.0
-        values = []
-        for round_number in range(rounds):
-            base_cost = before if round_number < drift_round else after
-            wobble = ((round_number * (index + 3) + index * 7) % 11 - 5) * 0.11
-            cumulative += max(0.1, base_cost + wobble)
-            values.append(round(cumulative, 2))
-        curves[policy] = values
-    return curves
+@lru_cache(maxsize=1)
+def default_engine() -> RiskEngine:
+    return RiskEngine.load()
+
+
+__all__ = ["RiskEngine", "default_engine", "GUIDANCE", "FEATURES", "MODELS_DIR"]

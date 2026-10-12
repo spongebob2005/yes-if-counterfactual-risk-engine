@@ -3,6 +3,8 @@ from collections.abc import Iterable
 import numpy as np
 import pandas as pd
 
+from .core import ENTITY_COLS, row_features
+
 
 def add_history(
     frame: pd.DataFrame,
@@ -13,6 +15,8 @@ def add_history(
 
     Rows missing either card1 or addr1 are treated as distinct entities rather
     than being accidentally grouped together as a shared "nan_nan" card.
+    `prev_dt` is kept raw so `since_last` can be recomputed when a counterfactual
+    moves the payment later in time.
     """
     required = {"TransactionID", "TransactionDT", "TransactionAmt", "card1", "addr1"}
     missing = required.difference(frame.columns)
@@ -39,24 +43,49 @@ def add_history(
     prior_mean = prior_amount_sum.div(prior_count.replace(0, np.nan))
     result["prior_cnt"] = prior_count.astype("int64")
     result["prior_mean_amt"] = prior_mean.fillna(fallback_amount)
-    result["since_last"] = grouped["TransactionDT"].diff().fillna(-1)
+    result["prev_dt"] = grouped["TransactionDT"].shift(1).astype(float)
+    if "DeviceInfo" in result:
+        has_device = result["DeviceInfo"].notna()
+        device = result["DeviceInfo"].astype("string").fillna("")
+        pair_count = result.groupby([entity, device], sort=False).cumcount()
+        result["card_device_prior"] = pair_count.where(has_device, 0).astype("int64")
+    else:
+        result["card_device_prior"] = 0
     return result.drop(columns="_entity_key")
 
 
+def add_graph_feats(frame: pd.DataFrame, entity_cols: Iterable[str] = ENTITY_COLS) -> pd.DataFrame:
+    """Shared-entity features (M3 level 1): for each device, email domain and billing
+    region, how many earlier payments and how many distinct cards have touched it so far.
+
+    Causal: computed on the time-sorted frame, each row counts itself and the past only.
+    """
+    if not frame["TransactionDT"].is_monotonic_increasing:
+        raise ValueError("Frame must be sorted by TransactionDT before adding graph features.")
+    result = frame.copy()
+    uid = result["card1"].astype("string") + "_" + result["addr1"].astype("string")
+    for col in entity_cols:
+        present = result[col].notna()
+        key = result[col].astype("string")
+        prior = result.groupby(key, sort=False).cumcount()
+        pair_new = (~pd.DataFrame({"k": key, "u": uid}).duplicated()).astype("int64")
+        distinct = pair_new.groupby(key, sort=False).cumsum()
+        result[f"{col}_prior_cnt"] = prior.where(present, 0).astype(float)
+        result[f"{col}_distinct_uids"] = distinct.where(present, 0).astype(float)
+    return result
+
+
 def make_features(frame: pd.DataFrame) -> pd.DataFrame:
-    """Add deterministic row-local features using already-computed history."""
+    """Add deterministic row-local features using already-computed history.
+
+    A thin pandas wrapper over `core.row_features`, which the API calls directly.
+    """
     required = {"TransactionDT", "TransactionAmt", "prior_mean_amt"}
     missing = required.difference(frame.columns)
     if missing:
         raise ValueError(f"make_features requires columns: {', '.join(sorted(missing))}")
-    result = frame.copy()
-    result["hour"] = (result["TransactionDT"] // 3600) % 24
-    result["dow"] = (result["TransactionDT"] // 86400) % 7
-    result["log_amt"] = np.log1p(result["TransactionAmt"].clip(lower=0))
-    result["amt_ratio"] = result["TransactionAmt"] / (
-        result["prior_mean_amt"] + 1e-6
-    )
-    return result
+    columns = frame if "prev_dt" in frame else frame.assign(prev_dt=np.nan)
+    return frame.assign(**row_features(columns))
 
 
 def learn_category_levels(

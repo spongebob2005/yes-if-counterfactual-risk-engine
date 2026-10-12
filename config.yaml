@@ -1,0 +1,56 @@
+# One place for thresholds, simulator costs and seeds (build plan, Appendix B).
+# `python -m src.experiments.run_all` reads this file and regenerates models/ and reports/.
+seed: 42
+
+data:
+  source: synthetic          # synthetic | ieee  (ieee needs data/raw from Kaggle)
+  cards: 6000
+  days: 180
+  tx_per_card_per_day: 0.15
+  fraud_rate: 0.035
+
+split: {train: 0.60, val: 0.15, calib: 0.10, test: 0.15}
+
+detector:
+  learning_rate: 0.05
+  num_leaves: 31
+  n_estimators: 2000
+  early_stopping: 100
+  subsample: 0.8
+  colsample_bytree: 0.7
+  min_child_samples: 50
+  # Risk never falls when the amount rises, and debit (code 1) is never riskier than credit (code 0).
+  monotone: {TransactionAmt: 1, log_amt: 1, amt_ratio: 1, card6: -1}
+
+# Overwritten in models/ by cost-minimising search on the validation split.
+thresholds: {tau_allow: 0.10, tau_block: 0.85}
+
+counterfactual:
+  amt_mults: [1.0, 0.9, 0.75, 0.5, 0.25, 0.1]
+  delays_h: [0, 1, 2, 4, 8, 12, 24]
+  card6_opts: [debit, credit]
+  weights: {amt: 1.0, delay: 0.5, method: 0.3}
+  top_k: 3
+
+policy:
+  margin: 0.10                # value of a legit transaction (margin + repeat business), share of amount
+  linucb_alpha: 1.0
+  drift_at: 0.5               # fraction of the stream where STEP_UP stops working as well
+  step_up_catch_after: 0.40
+  reward_clip: 2000.0
+  sim:
+    ALLOW:   {fric: 0.0, catch: 0.00, abandon: 0.00}
+    STEP_UP: {fric: 2.0, catch: 0.85, abandon: 0.03}    # fric: support + customer effort, in $
+    HOLD:    {fric: 6.0, catch: 0.90, abandon: 0.15}
+    BLOCK:   {fric: 10.0, catch: 1.00, abandon: 1.00}
+
+adversary:
+  rounds: 5
+  query_budget: 50
+  min_amt_frac: 0.5
+  adversarial_weight: 0.5     # down-weight attack rows so clean accuracy holds
+  budgets: [1, 5, 10, 25, 50, 100]
+  rate_limit: 10              # queries per attempt allowed by the defended API
+
+api:
+  analyst_rate_per_min: 30
