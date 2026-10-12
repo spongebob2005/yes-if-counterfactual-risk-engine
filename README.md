@@ -1,139 +1,129 @@
 ![yes, if — The cheapest way to yes](files/yes-if_1-primary.png)
 
-<h1 align="center">Counterfactual Payment Risk Engine</h1>
+<h1 align="center">yes, if — Counterfactual Payment Risk Engine</h1>
 
 <p align="center">
-  A risk-exploration demo that asks: <strong>what is the smallest, lowest-friction step that could turn a risky payment into a yes?</strong>
+  Risk engines stop at a score. <strong>yes, if</strong> finds the smallest change that turns a risky payment into an approval, learns which friction is cheapest to apply, and runs the result on PayPal.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-prototype-0b9d7a" alt="Prototype">
-  <img src="https://img.shields.io/badge/Python-3.10%2B-172335" alt="Python 3.10 or newer">
-  <img src="https://img.shields.io/badge/UI-Streamlit-ff4b4b" alt="Streamlit">
+  <a href="https://yes-if-silk.vercel.app">Live site</a> ·
+  <a href="https://yes-if-silk.vercel.app/app">Console</a> ·
+  <a href="https://yes-if-silk.vercel.app/docs">API docs</a>
 </p>
 
 ---
 
-## The idea
+## What it does
 
-Traditional payment decisions can stop at a risk score. **yes, if** explores the next question: what practical change might lower the score, and how much friction would it add?
+For every payment the engine answers four questions:
 
-This branded Streamlit prototype brings that idea to life with synthetic examples. It is designed to make the concept tangible—not to make real payment decisions.
+1. **How risky is it?** A LightGBM detector on causal card history and shared-device ("ring") signals, calibrated with isotonic regression so 0.10 means about 10%.
+2. **Why?** Top reasons from path contributions through the trees, in plain language.
+3. **What would make it a yes?** A counterfactual search over the 83 changes a buyer can actually make (pay 10–90% now, go through 1–24 hours later, switch debit/credit). It keeps only *minimal* changes (no smaller change also works) and returns the cheapest ones under the approval line.
+4. **Which friction is cheapest?** Above the approval line, a learned policy picks step-up, hold or block from the calibrated risk, the amount, and what it has learned about how often each friction catches fraud or loses a good customer.
 
-## Public demonstration page
+Every decision and every "yes, if" maps to concrete PayPal calls on an `AUTHORIZE` order: full capture, verification then capture, analyst review, void, partial capture with `final_capture: false`, or a scheduled capture.
 
-The Vercel site serves a teaser landing page at `/` (live at https://yes-if-silk.vercel.app). The previous interactive dashboard is kept, unlinked, at `/dashboard`; it includes the live decision view, counterfactual explorer, checkout plan, and policy comparison. Both pages use synthetic sample transactions and illustrative browser-side calculations. It has no payment credentials and does not call PayPal.
+## Results
 
-### Deploy the demo page on Vercel
+All numbers come from `python -m src.experiments.run_all` (seed 42) on the held-out, later-in-time test split (25,181 payments, 3.1% fraud).
 
-1. Import this repository into your Vercel account. The project can remain private in GitHub; grant Vercel access to it during import.
-2. Keep the repository root as the project root. `vercel.json` sets the static output directory to `public-demo`, and `.vercelignore` limits uploads to that folder.
-3. Deploy. Vercel will provide a public URL for the dashboard.
+| ID | Experiment | Result |
+| --- | --- | --- |
+| E1 | Detector: LightGBM vs logistic regression | PR-AUC **0.881** vs 0.785 · ROC-AUC 0.975 vs 0.942 · recall at 1% FPR **86.0%** vs 71.8% |
+| E2 | Calibration: raw vs isotonic | ECE 0.0023 → **0.0015** |
+| E3 | Shared-entity (graph) features | PR-AUC 0.881 with vs 0.882 without: no gain on this data (device history already carries the ring signal) |
+| E4 | Counterfactual quality (400 flagged payments) | Valid "yes, if" for **94%** of flagged legitimate buyers (27% of fraud) · 1.19 features changed · 88% within the card's history |
+| E5 | Policy under drift (step-up catch 85% → 40% halfway) | Cost after the drift: **learned friction $15.1k**, LinUCB $15.3k, oracle $15.6k, best static $18.5k (**−19%**). Over the whole stream the stale analytic policy is cheaper ($31.7k vs $32.3k) |
+| E6 | Adversarial retraining (5 rounds, 50 queries) | Evasion **27.7% → 6.0–9.0%**, clean PR-AUC stays 0.881–0.891 |
+| E7 | Evasion vs query budget (deployed model) | ≤ 7.5% at 100 queries; capped at 5% with coarse output and a 10-query limit |
+| — | Fairness: false-positive rate by segment | Device type 3.3% / 3.3% · debit 3.1% vs credit 3.5% · product C 6.5% (highest) |
 
-The live Streamlit app and PayPal sandbox backend are separate and are not deployed to Vercel. Never add PayPal credentials as Vercel variables for this demo.
+### Read this before quoting the numbers
 
-## Explore the demo
+- **Synthetic data.** The model is trained on a reproducible generator (`src/data/synth.py`) in the IEEE-CIS column layout, with account takeover, card testing, device rings and "stealth" fraud on the victim's own device. Set `data.source: ieee` in `config.yaml` to use the real IEEE-CIS files (Kaggle account required).
+- **Simulated friction.** No public dataset records step-up, hold or block outcomes, so they come from stated, configurable assumptions (`config.yaml → policy.sim`). A real rollout would start in shadow mode, then an A/B test with off-policy evaluation.
+- **Counterfactuals describe the model**, not causal truth: "the model would accept this if…". Buyers only get coarse guidance; exact scores and options are analyst-only and rate-limited.
+- No LLM makes or changes any decision.
 
-| Workspace | What you can explore |
+## Architecture
+
+```
+raw payment ─▶ M1 causal history + M3 shared-entity features ─▶ M2 LightGBM + isotonic ─▶ risk
+                                                   ▲ M6 adversarial retraining              │
+                                                   │                                        ▼
+                    M5 learned friction policy ◀── context + risk ── M4 counterfactual search
+                                   │
+                                   ▼
+          M7 FastAPI (user / analyst views) ─▶ PayPal sandbox (authorize → capture / void)
+                                   │
+                    website + console (Vercel) · Streamlit dashboard (M8) · reports (M9)
+```
+
+| Module | Code |
 | --- | --- |
-| **Live decision** | Inspect an illustrative transaction score, suggested action, and the signals behind it. |
-| **Counterfactual explorer** | Adjust transaction amount and timing, then compare simulated “yes, if…” options. |
-| **Checkout plan** | See which PayPal sandbox calls each decision (and each “yes, if…” step) would trigger. A dry run: it never contacts PayPal. |
-| **Policy battle** | Compare synthetic cumulative-cost curves across four illustrative policies. |
+| M1 Data and features | `src/data/` (`synth.py`, `load.py`, `features.py`, numpy-only `core.py` shared by training and serving) |
+| M2 Detector and calibration | `src/models/detector.py`, `metrics.py`, numpy predictor `serving.py` (exact parity with LightGBM is tested) |
+| M3 Graph features | `add_graph_feats` in `src/data/features.py` |
+| M4 Counterfactual engine | `src/counterfactual/search.py` |
+| M5 Friction policy | `src/policy/` (simulator, baselines B1–B3, LinUCB, learned-friction Thompson sampling) |
+| M6 Adversary loop | `src/adversary/attacker.py`, loop in `src/experiments/run_all.py` |
+| M7 Serving API | `src/api/main.py` (Vercel entry: `api/index.py`) |
+| M8 Dashboard | `public/app.html` (hosted console) and `dashboard/app.py` (Streamlit) |
+| M9 Evaluation | `src/experiments/run_all.py` → `reports/results.json` |
+| Decision layer | `risk_engine/` (`RiskEngine.load().decide(tx, view)`) |
+| PayPal | `src/paypal/client.py` (sandbox-only REST client), `gateway.py` (decision → plan) |
 
-## Run locally
+Design choices beyond the build plan, each made after the plan's version underperformed:
 
-**Requirements:** Python 3.10 or newer.
+- **Monotone constraints** on amount (+) and funding source (debit never riskier than credit), so a counterfactual never says "pay more to be approved".
+- **Adversarial rows come from training-period fraud**, not validation fraud: the plan's loop also early-stops on validation, which leaked and collapsed the model (PR-AUC 0.06).
+- **Learned friction policy.** LinUCB with the plan's context lost to every static baseline. Its replacement learns each friction's catch and abandonment rates from observable outcomes (a failed verification, a chargeback, an abandoned checkout) with discounted Thompson sampling. LinUCB is still reported, with a context that is linear in expected cost.
+
+## Run it
+
+**Requirements:** Python 3.12.
 
 ```bash
 git clone https://github.com/spongebob2005/yes-if-counterfactual-risk-engine.git
 cd yes-if-counterfactual-risk-engine
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
 
-python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-python -m pip install -r requirements.txt
-streamlit run dashboard/app.py
+python -m src.experiments.run_all          # data → model → experiments → models/ + reports/ (~1 minute)
+uvicorn src.api.main:app --reload          # API + website on http://127.0.0.1:8000
+streamlit run dashboard/app.py             # offline dashboard
+python -m unittest discover -s tests       # 60 tests
 ```
 
-Streamlit prints a local URL when the dashboard is ready.
+`requirements.txt` holds only what the deployed API needs (FastAPI, numpy, requests, python-dotenv); training and the dashboard use `requirements-dev.txt`.
 
-## Optional: prepare IEEE-CIS data
-
-The included preparation pipeline is a separate research step; the dashboard itself runs on built-in synthetic examples. To use the pipeline, download the IEEE-CIS Fraud Detection files from Kaggle (Kaggle account and competition rules apply), then install its additional data dependencies:
+### API in one call
 
 ```bash
-python -m pip install pandas numpy pyarrow
-mkdir -p data/raw
-# Place train_transaction.csv and train_identity.csv in data/raw/
-python -m scripts.prepare_ieee_data
+curl -X POST "https://yes-if-silk.vercel.app/api/decide?view=analyst" \
+  -H "Content-Type: application/json" \
+  -d '{"TransactionAmt": 834, "TransactionDT": 13910400, "card6": "credit", "prior_cnt": 30,
+       "prior_mean_amt": 95, "prev_dt": 13800000, "card_device_prior": 12, "DeviceInfo_distinct_uids": 1}'
 ```
 
-The script joins the files by `TransactionID`, sorts transactions chronologically, builds prior-only history features, and creates 60/15/10/15 train, validation, calibration, and test splits. Processed Parquet files and category levels are written to `data/processed/`; raw and processed data are excluded from version control.
+`view=user` (default) returns only `action` and `guidance`. See [/docs](https://yes-if-silk.vercel.app/docs) for every field and endpoint.
 
-## PayPal sandbox checkout
+### PayPal sandbox checkout
 
-This adds a separate checkout page and FastAPI backend. It uses a fixed $1.00 demo item configured on the server, creates a PayPal order after the buyer clicks the sandbox button, then checks PayPal's approved order and amount before capture. The Streamlit risk dashboard remains a separate demo; its heuristic score does not affect or execute this payment.
+The console's **Sandbox checkout** tab scores a demo buyer before PayPal opens, creates an `AUTHORIZE` order for a server-side catalog price, and runs the engine's plan after approval. Depending on the decision, the plan captures, asks for a one-time code, holds for review, or offers a "yes, if" (part now, the rest later). Blocked buyers never reach PayPal.
 
-1. Create a PayPal developer app and use its **Sandbox** Client ID and Secret.
-2. Create a local `.env` file with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. Never commit keys or use live credentials with this prototype.
-3. Install project dependencies and start the backend:
+Local setup: create `.env` with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from a PayPal developer **sandbox** app. Never commit it. Orders are stored in SQLite locally (`.data/`) and in Upstash Redis on Vercel. `scripts/paypal_smoke_test.py` exercises authorize → capture / partial capture / void from the terminal.
 
-```bash
-python -m pip install -r requirements.txt
-uvicorn src.paypal.checkout_app:app --host 127.0.0.1 --port 8000
-```
+## Deploy
 
-Open <http://localhost:8000/> and use a PayPal **sandbox personal** account to approve the test payment. The checkout records order status in `.data/checkout.sqlite3`, which is excluded from Git. Health endpoints are available at `/healthz` and `/readyz`.
-
-The separate terminal smoke test below remains available for trying the authorize/capture/void flow.
-
-## Optional: PayPal sandbox smoke test
-
-This standalone script exercises the PayPal **sandbox** authorization flow: create an order with intent `AUTHORIZE`, approve it as a sandbox buyer, authorize, then capture, partially capture, or void. It is separate from both the sandbox checkout page and the dashboard, and it only talks to the sandbox.
-
-1. Create a free account at [developer.paypal.com](https://developer.paypal.com) and open **Apps & Credentials** in **Sandbox** mode.
-2. Create a local `.env` file with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. `.env` is git-ignored; never commit real keys.
-3. Run an action:
-
-```bash
-python scripts/paypal_smoke_test.py --action partial   # capture 60% now; the rest stays authorized
-python scripts/paypal_smoke_test.py --action void      # void the authorization
-python scripts/paypal_smoke_test.py --action full      # capture in full
-```
-
-The script prints an approval link. Open it in a private window and sign in with your **sandbox personal** account, then press Enter in the terminal.
-
-### How decisions map to PayPal calls
-
-The client lives in `src/paypal/client.py` (sandbox only; it refuses non-sandbox URLs) and the decision-to-call mapping in `src/paypal/gateway.py`. The smoke test uses orders with intent `AUTHORIZE` to exercise authorization, capture, and void.
-
-| Engine decision | PayPal / app behavior |
-| --- | --- |
-| ALLOW | Capture the full authorization |
-| “Reduce the amount by 25%” | Partial capture (`final_capture: false`); the remainder stays authorized |
-| “Wait 30 minutes” | Keep the authorization, then re-score and capture later |
-| STEP UP | Our app asks for a verification, then captures (a PayPal call is only made after it passes) |
-| HOLD | Leave the authorization uncaptured while the payment is reviewed |
-| BLOCK | Void the authorization |
-
-These action plans are illustrative and are not connected to the checkout capture endpoint. Step-up and hold are app-level behavior, not PayPal features. The PayPal calls are covered by mocked unit tests (`tests/test_paypal.py`); only the smoke test and sandbox checkout talk to PayPal.
-
-## Run tests
-
-```bash
-python -m unittest discover -s tests
-```
+Vercel serves `public/` as static files and `api/index.py` (FastAPI) as a Python function; `api/waitlist.mjs` stays a Node function. `vercel.json` rewrites every `/api/*` path except the waitlist to the Python app. Required environment variables: `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` (sandbox), plus `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Upstash integration.
 
 ## Important: demo only
 
-Every transaction, score, action, mitigation, and policy curve shown in the dashboard is synthetic. The score is based on hand-written heuristics; it is **not** a trained model, calibrated probability, causal estimate, or validated fraud signal. Do not use this prototype to approve, decline, or investigate real payments.
+Trained on synthetic data with simulated intervention outcomes, and connected to the PayPal sandbox only. Do not use it to approve, decline or investigate real payments.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-<p align="center">
-  <sub>yes, if · The cheapest way to yes · Prototype for exploration only</sub>
-</p>
+[MIT](LICENSE)

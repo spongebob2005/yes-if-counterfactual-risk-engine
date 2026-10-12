@@ -4,444 +4,428 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>yes, if — The cheapest way to yes</title>
-    <meta name="description" content="yes, if turns risky payment declines into the smallest, lowest-friction path to approval. Coming soon.">
+    <meta name="description" content="yes, if is a counterfactual payment risk engine: it finds the smallest change that turns a risky payment into an approval and learns the cheapest friction to apply. Built for PayPal checkout.">
     <meta property="og:title" content="yes, if — The cheapest way to yes">
-    <meta property="og:description" content="Don't just score risk. Find the cheapest way to yes. Coming soon.">
+    <meta property="og:description" content="Don't just score risk. Find the cheapest way to yes.">
     <meta property="og:image" content="https://yes-if-silk.vercel.app/assets/og.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="theme-color" content="#0b111c">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111a2a'/%3E%3Cg stroke-linecap='round' stroke-width='5'%3E%3Ccircle cx='22' cy='24' r='5.5' fill='none' stroke='%23eef2f6'/%3E%3Cpath d='M30 30 46 13M17 51 30 35' stroke='%23eef2f6'/%3E%3Cpath d='M27 29 39 39' stroke='%233fdcaa'/%3E%3C/g%3E%3Ccircle cx='42' cy='41' r='6' fill='%233fdcaa'/%3E%3C/svg%3E">
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/site.css">
     <style>
-      :root {
-        --bg: #0b111c;
-        --bg-2: #111a2a;
-        --ink: #eef2f6;
-        --muted: #8a99ab;
-        --dim: #4c5b6d;
-        --line: rgba(238, 242, 246, .09);
-        --mint: #3fdcaa;
-        --teal: #11a07d;
-        --red: #ff7a6b;
-        --display: "Bricolage Grotesque", system-ui, sans-serif;
-        --mono: "JetBrains Mono", ui-monospace, monospace;
-        --body: "Inter", system-ui, sans-serif;
-        color-scheme: dark;
-      }
-      * { box-sizing: border-box; }
-      html { -webkit-text-size-adjust: 100%; }
-      body {
-        margin: 0;
-        min-height: 100dvh;
-        background: var(--bg);
-        color: var(--ink);
-        font-family: var(--body);
-        line-height: 1.5;
-        overflow-x: hidden;
-      }
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background:
-          radial-gradient(60vw 50vh at 78% 8%, rgba(63, 220, 170, .10), transparent 70%),
-          radial-gradient(50vw 40vh at 0% 100%, rgba(17, 160, 125, .07), transparent 70%);
-      }
-      body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-          linear-gradient(var(--line) 1px, transparent 1px),
-          linear-gradient(90deg, var(--line) 1px, transparent 1px);
-        background-size: 72px 72px;
-        mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 20%, transparent 80%);
-        opacity: .45;
-      }
-      a { color: inherit; }
-      .wrap { position: relative; z-index: 1; width: min(1180px, 100%); margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); }
-
-      header { display: flex; align-items: center; justify-content: space-between; padding-block: 28px; }
-      .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-      .logo svg { width: 34px; height: 34px; }
-      .logo span { font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.03em; }
-      .logo b { color: var(--mint); font-weight: 800; }
-      .status {
-        display: inline-flex; align-items: center; gap: 9px;
-        padding: 7px 13px; border: 1px solid var(--line); border-radius: 999px;
-        font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
-        background: rgba(17, 26, 42, .6);
-      }
-      .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 rgba(63,220,170,.6); animation: pulse 2.2s infinite; }
-      @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(63,220,170,0); } 100% { box-shadow: 0 0 0 0 rgba(63,220,170,0); } }
-
-      .hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(32px, 6vw, 80px); align-items: center; padding-block: clamp(48px, 10vh, 120px) clamp(56px, 10vh, 110px); }
-      .eyebrow { font-family: var(--mono); font-size: .78rem; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); margin: 0 0 26px; }
-      h1 {
-        margin: 0;
-        font-family: var(--display);
-        font-weight: 800;
-        font-size: clamp(3.4rem, 9.5vw, 8.4rem);
-        line-height: .94;
-        letter-spacing: -.055em;
-      }
-      h1 .comma { color: var(--mint); }
+      .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(32px, 6vw, 72px); align-items: center; padding-block: clamp(40px, 8vh, 96px) clamp(48px, 8vh, 90px); }
+      h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(3.3rem, 9vw, 7.8rem); line-height: .94; letter-spacing: -.055em; }
       h1 .soft { color: var(--dim); }
-      .lede { max-width: 46ch; margin: 30px 0 0; font-size: clamp(1.02rem, 1.4vw, 1.18rem); color: var(--muted); }
-      .lede strong { color: var(--ink); font-weight: 500; }
-
-      /* decision card */
-      .card {
-        position: relative;
-        padding: 26px;
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        background: linear-gradient(180deg, rgba(17, 26, 42, .92), rgba(11, 17, 28, .92));
-        box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255,255,255,.04);
-        font-family: var(--mono);
-      }
-      .card-top { display: flex; justify-content: space-between; color: var(--dim); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
-      .txn { margin-top: 18px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-      .txn-amt { font-family: var(--display); font-weight: 700; font-size: 2.3rem; letter-spacing: -.03em; color: var(--ink); }
-      .txn-meta { color: var(--muted); font-size: .76rem; text-align: right; }
-      .meter { margin-top: 22px; }
-      .meter-row { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); margin-bottom: 8px; }
-      .bar { height: 6px; border-radius: 99px; background: rgba(238,242,246,.07); overflow: hidden; }
-      .bar > div { height: 100%; width: 82%; border-radius: inherit; background: var(--red); transition: width 1s cubic-bezier(.2,.8,.2,1), background-color .6s; }
-      .verdict { margin-top: 22px; padding-top: 20px; border-top: 1px dashed var(--line); min-height: 92px; }
-      .verdict-label { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
-      .verdict-text { margin-top: 8px; font-family: var(--display); font-size: 1.55rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
-      .verdict-text .no { color: var(--red); }
+      h1 .comma { color: var(--mint); }
+      .hero .lede { margin: 26px 0 0; }
+      .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+      .live { font-family: var(--mono); padding: 24px; }
+      .live-top { display: flex; justify-content: space-between; gap: 12px; color: var(--dim); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+      .live-top .on { display: inline-flex; align-items: center; gap: 7px; color: var(--mint); }
+      .live-top .on i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); animation: pulse 2.2s infinite; }
+      @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(63,220,170,.55); } 70% { box-shadow: 0 0 0 8px rgba(63,220,170,0); } 100% { box-shadow: 0 0 0 0 rgba(63,220,170,0); } }
+      .live-txn { margin-top: 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+      .live-amt { font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: -.03em; }
+      .live-meta { color: var(--muted); font-size: .74rem; text-align: right; max-width: 22ch; }
+      .live .meter { margin-top: 18px; }
+      .verdict { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); min-height: 128px; }
+      .verdict-text { margin-top: 10px; font-family: var(--display); font-size: 1.32rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
       .verdict-text .yes { color: var(--mint); }
-      .verdict-text .cond { color: var(--ink); }
-      .cursor { display: inline-block; width: .5ch; height: 1.1em; vertical-align: -.15em; background: var(--mint); margin-left: 2px; animation: blink 1s steps(1) infinite; }
+      .cursor { display: inline-block; width: .5ch; height: 1.05em; vertical-align: -.15em; background: var(--mint); margin-left: 2px; animation: blink 1s steps(1) infinite; }
       @keyframes blink { 50% { opacity: 0; } }
-      .friction { margin-top: 10px; font-size: .72rem; color: var(--muted); opacity: 0; transition: opacity .5s; }
-      .friction.on { opacity: 1; }
+      .reasons { margin-top: 10px; color: var(--muted); font-size: .72rem; }
 
-      /* teaser strip */
-      .pillars { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
-      .pillar { padding: 34px 28px 40px 0; }
-      .pillar + .pillar { padding-left: 28px; border-left: 1px solid var(--line); }
-      .pillar .n { font-family: var(--mono); font-size: .72rem; color: var(--mint); letter-spacing: .1em; }
-      .pillar h2 { margin: 14px 0 8px; font-family: var(--display); font-weight: 700; font-size: 1.35rem; letter-spacing: -.02em; line-height: 1.2; }
-      .pillar p { margin: 0; color: var(--muted); font-size: .94rem; max-width: 34ch; }
-      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-      .blur { filter: blur(5px); user-select: none; }
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-block: 1px solid var(--line); }
+      .stat { padding: 28px 24px 30px 0; }
+      .stat + .stat { padding-left: 24px; border-left: 1px solid var(--line); }
+      .stat b { display: block; font-family: var(--display); font-weight: 800; font-size: clamp(1.8rem, 3.4vw, 2.6rem); letter-spacing: -.04em; line-height: 1; }
+      .stat > span { display: block; margin-top: 10px; color: var(--muted); font-size: .88rem; max-width: 26ch; }
 
-      .header-right { display: flex; align-items: center; gap: 12px; }
-      .btn {
-        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-        min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px;
-        background: var(--mint); color: #062a20; font: 600 .92rem/1 var(--body);
-        text-decoration: none; cursor: pointer; white-space: nowrap;
-        transition: transform .15s, background-color .2s;
-      }
-      .btn:hover { background: #6be8c0; }
-      .btn:active { transform: scale(.97); }
-      .btn:disabled { opacity: .6; cursor: progress; }
-      .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); min-height: 36px; padding: 0 15px; font-size: .82rem; }
-      .btn-ghost:hover { background: rgba(238,242,246,.06); }
-      :focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+      section.block { padding-block: clamp(64px, 11vh, 120px) 0; }
+      .head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 36px; }
+      .head .h-section { max-width: 15ch; }
+      .head p { margin: 0; max-width: 46ch; color: var(--muted); }
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .step { padding: 24px 22px 26px; }
+      .step .n { font-family: var(--mono); font-size: .72rem; color: var(--mint); letter-spacing: .1em; }
+      .step h3 { margin: 12px 0 8px; font-family: var(--display); font-size: 1.28rem; letter-spacing: -.02em; }
+      .step p { margin: 0; color: var(--muted); font-size: .92rem; }
+      .step .chip { margin-top: 16px; }
 
-      .waitlist { margin-top: 34px; max-width: 470px; }
-      .waitlist-row {
-        display: flex; gap: 6px; padding: 6px;
-        border: 1px solid var(--line); border-radius: 999px; background: rgba(17, 26, 42, .75);
-        transition: border-color .2s;
-      }
+      .results { display: grid; grid-template-columns: 1.25fr .75fr; gap: 12px; }
+      .results h3 { margin: 6px 0 4px; font-family: var(--display); font-size: 1.3rem; letter-spacing: -.02em; }
+      .results p.cap { margin: 0 0 16px; color: var(--muted); font-size: .9rem; }
+      .kv { display: grid; gap: 0; margin-top: 4px; }
+      .kv div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+      .kv div span:first-child { color: var(--muted); }
+      .kv div span:last-child { font-family: var(--mono); }
+      .honest { margin-top: 12px; }
+      .honest ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: .9rem; }
+      .honest li + li { margin-top: 6px; }
+
+      table.map { width: 100%; border-collapse: collapse; font-size: .92rem; }
+      table.map th, table.map td { text-align: left; padding: 13px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+      table.map th { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 500; border-top: 0; }
+      table.map td:last-child { color: var(--muted); }
+      table.map code { font-family: var(--mono); font-size: .82rem; color: var(--ink); }
+      .table-wrap { overflow-x: auto; }
+
+      .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 900px; }
+      .plan { display: flex; flex-direction: column; padding: 30px 28px; }
+      .plan.featured { border-color: rgba(63,220,170,.4); background: linear-gradient(180deg, rgba(63,220,170,.07), rgba(17,26,42,.85) 45%); }
+      .plan-top { display: flex; justify-content: space-between; align-items: center; }
+      .plan-name { font-family: var(--mono); font-size: .76rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+      .featured .plan-name { color: var(--mint); }
+      .badge { padding: 4px 9px; border-radius: 999px; background: rgba(63,220,170,.12); color: var(--mint); font-family: var(--mono); font-size: .68rem; }
+      .price { margin-top: 18px; display: flex; align-items: baseline; gap: 8px; }
+      .price b { font-family: var(--display); font-weight: 800; font-size: 3.3rem; letter-spacing: -.05em; line-height: 1; }
+      .price span { color: var(--muted); }
+      .plan ul { list-style: none; margin: 22px 0 26px; padding: 20px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 10px; font-size: .93rem; }
+      .plan li { display: flex; gap: 10px; }
+      .plan li::before { content: ""; flex: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%; background: rgba(63,220,170,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2 7 10.5l4.5-5' fill='none' stroke='%233fdcaa' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat; }
+      .plan .btn { margin-top: auto; width: 100%; }
+      .fine { margin: 16px 0 0; color: var(--dim); font-family: var(--mono); font-size: .72rem; }
+
+      .join { padding-block: clamp(70px, 12vh, 120px) 10px; text-align: center; }
+      .join h2 { margin: 16px 0 0; font-family: var(--display); font-weight: 800; font-size: clamp(2.2rem, 6vw, 4.4rem); letter-spacing: -.045em; line-height: 1; }
+      .join h2 span { color: var(--mint); }
+      .waitlist { margin: 32px auto 0; max-width: 480px; text-align: left; }
+      .waitlist-row { display: flex; gap: 6px; padding: 6px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(17,26,42,.75); }
       .waitlist-row:focus-within { border-color: rgba(63,220,170,.5); }
-      .waitlist input[type="email"] {
-        flex: 1; min-width: 0; padding: 0 16px; border: 0; background: transparent;
-        color: var(--ink); font: 400 1rem var(--body); outline: none;
-      }
+      .waitlist input[type="email"] { flex: 1; min-width: 0; padding: 0 16px; border: 0; background: transparent; color: var(--ink); outline: none; }
       .waitlist input::placeholder { color: var(--dim); }
       .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-      .waitlist-msg { min-height: 1.4em; margin: 10px 0 0 18px; font-size: .84rem; color: var(--muted); }
+      .waitlist-msg { min-height: 1.4em; margin: 10px 0 0 18px; font-size: .86rem; color: var(--muted); }
       .waitlist-msg.ok { color: var(--mint); }
       .waitlist-msg.err { color: var(--red); }
-      .waitlist.done .waitlist-row { border-color: rgba(63,220,170,.5); }
-      .soon .waitlist { margin: 36px auto 0; text-align: left; }
 
-      .how { padding-block: clamp(70px, 12vh, 120px) 20px; }
-      .section-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
-      .section-head h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 4.6vw, 3.4rem); letter-spacing: -.045em; line-height: 1; max-width: 16ch; }
-      .section-head p { margin: 0; max-width: 40ch; color: var(--muted); }
-      .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: step; }
-      .step {
-        position: relative; padding: 26px 24px 28px; border: 1px solid var(--line); border-radius: 20px;
-        background: rgba(17, 26, 42, .55); overflow: hidden;
+      @media (max-width: 960px) {
+        .hero, .results { grid-template-columns: 1fr; }
+        .steps { grid-template-columns: repeat(2, 1fr); }
+        .stats { grid-template-columns: repeat(2, 1fr); }
+        .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+        .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
       }
-      .step-k { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
-      .step h3 { margin: 12px 0 8px; font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
-      .step p { margin: 0; color: var(--muted); font-size: .92rem; }
-      .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; font-family: var(--mono); font-size: .72rem; }
-      .chip { padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line); color: var(--muted); }
-      .chip.hot { color: var(--red); border-color: rgba(255,122,107,.3); background: rgba(255,122,107,.06); }
-      .chip.best { color: var(--mint); border-color: rgba(63,220,170,.35); background: rgba(63,220,170,.07); }
-      .chip.blur { filter: blur(4px); }
-
-      .reveal { opacity: 0; transform: translateY(18px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
-      .reveal.in { opacity: 1; transform: none; }
-      .no-js .reveal { opacity: 1; transform: none; }
-
-      .soon { padding-block: clamp(70px, 12vh, 130px); text-align: center; }
-      .soon p { margin: 0; font-family: var(--mono); font-size: .78rem; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
-      .soon h2 { margin: 18px 0 0; font-family: var(--display); font-weight: 800; font-size: clamp(2.2rem, 6vw, 4.6rem); letter-spacing: -.045em; line-height: 1; }
-      .soon h2 span { color: var(--mint); }
-
-      footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-block: 26px 34px; border-top: 1px solid var(--line); color: var(--dim); font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; }
-
-      .rise { opacity: 0; transform: translateY(14px); animation: rise .9s cubic-bezier(.2,.8,.2,1) forwards; }
-      .d1 { animation-delay: .08s; } .d2 { animation-delay: .2s; } .d3 { animation-delay: .34s; } .d4 { animation-delay: .5s; }
-      @keyframes rise { to { opacity: 1; transform: none; } }
-
-      @media (max-width: 880px) {
-        .hero { grid-template-columns: 1fr; }
-        .pillars { grid-template-columns: 1fr; }
-        .pillar, .pillar + .pillar { padding: 28px 0; border-left: 0; }
-        .pillar + .pillar { border-top: 1px solid var(--line); }
-        .flow { grid-template-columns: 1fr; }
-      }
-      @media (max-width: 480px) {
-        .status { display: none; }
+      @media (max-width: 600px) {
+        .steps, .plans { grid-template-columns: 1fr; }
+        .stats { grid-template-columns: 1fr; }
+        .stat, .stat + .stat { padding: 22px 0; border-left: 0; }
+        .stat + .stat { border-top: 1px solid var(--line); }
         .waitlist-row { flex-direction: column; border-radius: 18px; padding: 8px; }
         .waitlist input[type="email"] { min-height: 44px; }
-        .card { padding: 20px; }
-        .txn-amt { font-size: 1.9rem; }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { animation: none !important; transition: none !important; }
-        .rise, .reveal { opacity: 1; transform: none; }
       }
     </style>
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body>
     <div class="wrap">
-      <header class="rise">
+      <header class="site-header">
         <a class="logo" href="/" aria-label="yes, if home">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <g stroke-linecap="round" stroke-width="5" fill="none">
-              <circle cx="20" cy="22" r="6" stroke="#eef2f6"/>
-              <path d="M30 30 47 10M14 54 29 35" stroke="#eef2f6"/>
-              <path d="M25 27 40 39" stroke="#3fdcaa"/>
-            </g>
-            <circle cx="44" cy="42" r="7" fill="#3fdcaa"/>
-          </svg>
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g stroke-linecap="round" stroke-width="5" fill="none"><circle cx="20" cy="22" r="6" stroke="#eef2f6"/><path d="M30 30 47 10M14 54 29 35" stroke="#eef2f6"/><path d="M25 27 40 39" stroke="#3fdcaa"/></g><circle cx="44" cy="42" r="7" fill="#3fdcaa"/></svg>
           <span>yes<b>,</b> if</span>
         </a>
-        <div class="header-right">
-          <div class="status"><i></i><span>In development</span></div>
-          <a class="btn btn-ghost" href="#join">Join waitlist</a>
-        </div>
+        <nav class="nav" aria-label="Main">
+          <a class="hide-sm" href="#how">How it works</a>
+          <a class="hide-sm" href="#results">Results</a>
+          <a class="hide-sm" href="#pricing">Pricing</a>
+          <a href="/docs">API</a>
+          <a class="btn btn-sm" href="/app">Open console</a>
+        </nav>
       </header>
 
       <main>
         <section class="hero">
           <div>
-            <p class="eyebrow rise d1">The cheapest way to yes</p>
-            <h1 class="rise d2">Not <span class="soft">no.</span><br>yes<span class="comma">,</span> if.</h1>
-            <p class="lede rise d3">Risk engines stop at a score. We're building the next step: <strong>the smallest, lowest-friction change that turns a risky payment into an approval</strong> — instead of a lost customer.</p>
-            <div class="rise d4">
-            <form class="waitlist" data-waitlist novalidate>
-              <div class="waitlist-row">
-                <label class="sr-only" for="email-hero">Email address</label>
-                <input id="email-hero" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
-                <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
-                <button class="btn" type="submit">Get early access</button>
-              </div>
-              <p class="waitlist-msg" role="status"></p>
-            </form>
+            <p class="eyebrow">Counterfactual payment risk engine</p>
+            <h1>Not <span class="soft">no.</span><br>yes<span class="comma">,</span> if.</h1>
+            <p class="lede">Risk engines stop at a score. <strong>yes, if finds the smallest change that turns a risky payment into an approval</strong> (pay part now, pay a little later, or use a different card), then learns which friction is cheapest to apply. It plugs straight into PayPal checkout.</p>
+            <div class="cta">
+              <a class="btn" href="/app">Try the live engine</a>
+              <a class="btn btn-ghost" href="/app#checkout">PayPal sandbox checkout</a>
             </div>
           </div>
 
-          <div class="card rise d4" aria-live="polite">
-            <div class="card-top"><span id="txn-id">TXN-5176</span><span>Live preview</span></div>
-            <div class="txn">
-              <div class="txn-amt" id="txn-amt">$1,240.00</div>
-              <div class="txn-meta" id="txn-meta">new device<br>02:14 local</div>
+          <div class="card live" aria-live="polite">
+            <div class="live-top"><span id="live-id">Loading…</span><span class="on"><i></i>Live model</span></div>
+            <div class="live-txn">
+              <div class="live-amt num" id="live-amt">—</div>
+              <div class="live-meta" id="live-meta"></div>
             </div>
             <div class="meter">
-              <div class="meter-row"><span>Risk</span><span id="risk-val">0.82</span></div>
-              <div class="bar"><div id="risk-bar"></div></div>
+              <div class="meter-row"><span>Fraud probability</span><span id="live-risk">—</span></div>
+              <div class="bar"><i id="live-bar" style="width:0"></i><span class="tick" id="live-tick" title="Approval line"></span></div>
             </div>
             <div class="verdict">
-              <div class="verdict-label">Decision</div>
-              <div class="verdict-text" id="verdict"><span class="no">Decline</span></div>
-              <div class="friction" id="friction">friction ▪▫▫ · risk → 0.21</div>
+              <div class="label">Decision</div>
+              <div class="verdict-text" id="live-verdict"></div>
+              <div class="reasons" id="live-reasons"></div>
             </div>
           </div>
         </section>
 
-        <section class="pillars" aria-label="What's coming">
-          <div class="pillar reveal">
-            <div class="n">01 / COUNTERFACTUALS</div>
-            <h2>Ask what would change the answer.</h2>
-            <p>Every risky transaction gets a ranked list of <span class="blur">verify, hold, split</span> conditions that could flip it.</p>
+        <section class="stats" aria-label="Headline results" id="stats">
+          <div class="stat"><b id="s-prauc">—</b><span>PR-AUC, calibrated detector (logistic baseline <span id="s-lr">—</span>)</span></div>
+          <div class="stat"><b id="s-recall">—</b><span>of fraud caught at a 1% false-positive rate</span></div>
+          <div class="stat"><b id="s-evasion">—</b><span>attack success before → after adversarial retraining</span></div>
+          <div class="stat"><b id="s-drift">—</b><span>lower cost than the best static policy after attackers adapt</span></div>
+        </section>
+
+        <section class="block" id="how" aria-labelledby="how-title">
+          <div class="head reveal">
+            <h2 class="h-section" id="how-title">From no to the cheapest yes.</h2>
+            <p>Four layers on every payment. The detector says how risky it is; the rest decides what to do about it.</p>
           </div>
-          <div class="pillar reveal">
-            <div class="n">02 / FRICTION-AWARE</div>
-            <h2>Cheapest path wins.</h2>
-            <p>Options are weighed against the cost they put on a real customer — not just the risk they remove.</p>
-          </div>
-          <div class="pillar reveal">
-            <div class="n">03 / CHECKOUT-NATIVE</div>
-            <h2>From decision to checkout.</h2>
-            <p>Designed to plug straight into a <span class="blur">PayPal checkout</span> flow. More soon.</p>
+          <div class="steps">
+            <article class="card step reveal">
+              <div class="n">01 / DETECT</div>
+              <h3>A score you can trust.</h3>
+              <p>Gradient-boosted trees on causal card history and shared-device signals, calibrated so 0.10 really means about 10%.</p>
+              <span class="chip">LightGBM · isotonic</span>
+            </article>
+            <article class="card step reveal">
+              <div class="n">02 / EXPLAIN</div>
+              <h3>Reasons, not a black box.</h3>
+              <p>Every decision lists the signals that pushed it up or down: a new device, an odd hour, a device shared by many cards.</p>
+              <span class="chip">path contributions</span>
+            </article>
+            <article class="card step reveal">
+              <div class="n">03 / YES, IF</div>
+              <h3>The smallest change.</h3>
+              <p>Searches 83 changes a buyer can actually make (part-payment, delay, debit or credit) and returns the cheapest ones that cross the approval line.</p>
+              <span class="chip">counterfactual search</span>
+            </article>
+            <article class="card step reveal">
+              <div class="n">04 / LEARN</div>
+              <h3>Cheapest friction wins.</h3>
+              <p>A policy that learns how well step-up, hold and block really work from their outcomes, and shifts when attackers start beating one-time passcodes.</p>
+              <span class="chip">Thompson sampling</span>
+            </article>
           </div>
         </section>
 
-        <section class="how" aria-labelledby="how-title">
-          <div class="section-head reveal">
-            <h2 id="how-title">Three steps from no to yes.</h2>
-            <p>A sneak peek at the engine. The full picture lands with early access.</p>
+        <section class="block" id="results" aria-labelledby="results-title">
+          <div class="head reveal">
+            <h2 class="h-section" id="results-title">Measured, not promised.</h2>
+            <p>Every number on this page is produced by one reproducible script and served from the same model the API runs.</p>
           </div>
-          <div class="flow">
-            <div class="step reveal">
-              <div class="step-k">Step 1 · Score</div>
-              <h3>Spot the risk.</h3>
-              <p>Every payment is scored, and each signal behind the score is surfaced.</p>
-              <div class="chip-row"><span class="chip hot">new device</span><span class="chip hot">02:14 local</span><span class="chip">amount ×4</span></div>
+          <div class="results">
+            <div class="card pad reveal">
+              <div class="label">Experiment E5 · policy under drift</div>
+              <h3>When attackers learn to pass step-up</h3>
+              <p class="cap">Cumulative cost (fraud loss + friction + lost customers) over the test stream. Halfway through, step-up stops catching most fraud.</p>
+              <div id="chart-policy"></div>
             </div>
-            <div class="step reveal">
-              <div class="step-k">Step 2 · Search</div>
-              <h3>Ask “what if?”</h3>
-              <p>The engine searches small changes that could flip the outcome.</p>
-              <div class="chip-row"><span class="chip">3-D Secure</span><span class="chip">hold 15m</span><span class="chip blur">split pay</span><span class="chip blur">address</span></div>
+            <div class="card pad reveal">
+              <div class="label">Experiment E6 · adversary loop</div>
+              <h3>Harder to fool each round</h3>
+              <p class="cap">Share of flagged fraud a black-box attacker gets approved with 50 queries; line is clean PR-AUC.</p>
+              <div id="chart-adv"></div>
+              <div class="kv" id="kv"></div>
             </div>
-            <div class="step reveal">
-              <div class="step-k">Step 3 · Ship</div>
-              <h3>Pick the cheapest yes.</h3>
-              <p>Ranked by risk removed per unit of customer friction, then sent to checkout.</p>
-              <div class="chip-row"><span class="chip best">yes, if verified · −0.61</span></div>
-            </div>
+          </div>
+          <div class="card pad honest reveal">
+            <div class="label">Read this before quoting the numbers</div>
+            <ul>
+              <li>The model is trained on a <strong>synthetic</strong>, reproducible transaction generator in the IEEE-CIS column layout (account takeover, card testing, device rings). The IEEE-CIS pipeline is included for anyone with Kaggle access.</li>
+              <li>Step-up, hold and block outcomes are <strong>simulated</strong> with stated, configurable assumptions: no public dataset records them. A real rollout starts in shadow mode, then an A/B test.</li>
+              <li>Counterfactuals describe the <strong>model's</strong> decision boundary ("the model would accept this if…"), not causal truth. Buyers only see coarse guidance; exact options are for analysts.</li>
+            </ul>
           </div>
         </section>
 
-        <section class="soon reveal" id="join">
-          <p>Coming soon</p>
+        <section class="block" id="paypal" aria-labelledby="paypal-title">
+          <div class="head reveal">
+            <h2 class="h-section" id="paypal-title">Every decision is a PayPal call.</h2>
+            <p>Orders are created with intent <code class="mono">AUTHORIZE</code>, so the engine decides what happens to the money after the buyer approves.</p>
+          </div>
+          <div class="card reveal table-wrap">
+            <table class="map">
+              <thead><tr><th>Decision</th><th>What happens</th><th>PayPal Orders &amp; Payments API</th></tr></thead>
+              <tbody>
+                <tr><td><span class="pill a-ALLOW">ALLOW</span></td><td>Approved straight away</td><td>Authorize, then <code>capture</code> in full</td></tr>
+                <tr><td><span class="pill a-STEP_UP">STEP UP</span></td><td>Buyer confirms a one-time code</td><td>Authorize; capture once verified</td></tr>
+                <tr><td><span class="pill a-HOLD">HOLD</span></td><td>An analyst reviews it</td><td>Authorization kept; capture or <code>void</code> after review</td></tr>
+                <tr><td><span class="pill a-BLOCK">BLOCK</span></td><td>Declined, unless the buyer takes a "yes, if"</td><td>No order is created</td></tr>
+                <tr><td><span class="mint mono">yes, if</span> pay part now</td><td>Part of the amount now, the rest after verification</td><td>Partial capture with <code>final_capture: false</code></td></tr>
+                <tr><td><span class="mint mono">yes, if</span> later</td><td>The payment goes through a few hours later</td><td>Authorization kept, captured on schedule</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="block" id="pricing" aria-labelledby="pricing-title">
+          <div class="head reveal">
+            <h2 class="h-section" id="pricing-title">Start free. Upgrade when it pays.</h2>
+            <p>The engine and console are open to everyone today. Premium is in early access.</p>
+          </div>
+          <div class="plans">
+            <article class="card plan reveal">
+              <div class="plan-top"><span class="plan-name">Free</span></div>
+              <div class="price"><b>$0</b><span>forever</span></div>
+              <ul>
+                <li>Decisions API with buyer and analyst views</li>
+                <li>Reasons and "yes, if" options per payment</li>
+                <li>60 analyst decisions a minute</li>
+                <li>Console and PayPal sandbox checkout</li>
+              </ul>
+              <a class="btn btn-ghost" href="/app">Start free</a>
+            </article>
+            <article class="card plan featured reveal">
+              <div class="plan-top"><span class="plan-name">Premium</span><span class="badge">Early access</span></div>
+              <div class="price"><b>$10</b><span>/ month</span></div>
+              <ul>
+                <li>Everything in Free</li>
+                <li>API keys and higher rate limits</li>
+                <li>Your own friction costs and thresholds</li>
+                <li>Live PayPal checkout integration</li>
+                <li>Monthly policy and drift reports</li>
+              </ul>
+              <button class="btn" type="button" data-plan="premium">Get Premium early access</button>
+            </article>
+          </div>
+          <p class="fine reveal">Planned launch pricing in USD. No card needed to join the early-access list.</p>
+        </section>
+
+        <section class="join reveal" id="join">
+          <p class="eyebrow">Early access</p>
           <h2>Fewer declines<span>.</span> More yes<span>,</span> ifs<span>.</span></h2>
           <form class="waitlist" data-waitlist novalidate>
-              <div class="waitlist-row">
-                <label class="sr-only" for="email-footer">Email address</label>
-                <input id="email-footer" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
-                <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
-                <button class="btn" type="submit">Get early access</button>
-              </div>
-              <p class="waitlist-msg" role="status"></p>
-            </form>
+            <div class="waitlist-row">
+              <label class="sr-only" for="email">Email address</label>
+              <input id="email" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+              <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+              <button class="btn" type="submit">Get early access</button>
+            </div>
+            <p class="waitlist-msg" role="status"></p>
+          </form>
         </section>
       </main>
 
-      <footer>
-        <span>© 2026 yes, if</span>
-        <span>Prototype · synthetic data only</span>
+      <footer class="site-footer">
+        <span>© 2026 yes, if · MIT licensed</span>
+        <span><a href="/docs">API</a> · <a href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine">GitHub</a> · Synthetic data · PayPal sandbox</span>
       </footer>
     </div>
 
+    <script src="/assets/common.js"></script>
     <script>
       (() => {
-        const scenarios = [
-          { id: "TXN-5176", amt: "$1,240.00", meta: "new device<br>02:14 local", risk: .82, after: .21, cond: "verified with 3-D Secure", friction: "▪▫▫" },
-          { id: "TXN-3309", amt: "$489.99", meta: "new shipping address<br>11:52 local", risk: .71, after: .28, cond: "shipped to billing address", friction: "▪▪▫" },
-          { id: "TXN-8842", amt: "$3,600.00", meta: "first purchase<br>19:07 local", risk: .77, after: .24, cond: "split into two payments", friction: "▪▪▫" },
-          { id: "TXN-1027", amt: "$212.40", meta: "velocity spike<br>04:41 local", risk: .68, after: .19, cond: "held for 15 minutes", friction: "▪▫▫" },
-        ];
+        const { api, money, pct, hour, actionLabel, esc, lineChart, barChart, reveal } = window.yesif;
         const $ = (id) => document.getElementById(id);
-        const bar = $("risk-bar"), verdict = $("verdict"), friction = $("friction");
         const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
         const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-        const setRisk = (v) => {
-          $("risk-val").textContent = v.toFixed(2);
-          bar.style.width = (v * 100) + "%";
-          bar.style.backgroundColor = v > .5 ? "var(--red)" : "var(--mint)";
-        };
-        async function type(el, text) {
-          if (reduced) { el.textContent = text; return; }
-          for (let i = 1; i <= text.length; i++) { el.textContent = text.slice(0, i); await wait(32); }
-        }
-        async function run(i) {
-          const s = scenarios[i % scenarios.length];
-          $("txn-id").textContent = s.id;
-          $("txn-amt").textContent = s.amt;
-          $("txn-meta").innerHTML = s.meta;
-          friction.classList.remove("on");
-          setRisk(s.risk);
-          verdict.innerHTML = '<span class="no">Decline</span>';
-          await wait(1700);
-          verdict.innerHTML = '<span class="yes">yes, if </span><span class="cond"></span><span class="cursor"></span>';
-          await type(verdict.querySelector(".cond"), s.cond);
-          setRisk(s.after);
-          friction.textContent = `friction ${s.friction} · risk → ${s.after.toFixed(2)}`;
-          friction.classList.add("on");
-          await wait(3200);
-          run(i + 1);
-        }
-        run(0);
+        reveal();
 
-        const io = "IntersectionObserver" in window && !reduced
-          ? new IntersectionObserver((entries) => entries.forEach((e) => {
-              if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-            }), { threshold: .15 })
-          : null;
-        document.querySelectorAll(".reveal").forEach((el, i) => {
-          if (!io) return el.classList.add("in");
-          el.style.transitionDelay = (i % 3) * 90 + "ms";
-          io.observe(el);
+        // ---- live hero card: real decisions from the deployed engine ----
+        async function hero() {
+          let decisions;
+          try {
+            const samples = await api("/api/samples");
+            decisions = await Promise.all(samples.map(async (s) => ({ s, d: await api("/api/decide?view=analyst", { method: "POST", body: JSON.stringify(s.transaction) }) })));
+          } catch (e) {
+            $("live-id").textContent = "Engine unavailable";
+            $("live-verdict").textContent = "The live engine could not be reached. Please refresh.";
+            return;
+          }
+          const order = ["large", "clean", "suspicious", "borderline", "ring", "testing"];
+          decisions.sort((a, b) => order.indexOf(a.s.key) - order.indexOf(b.s.key));
+          const scale = (r) => Math.min(100, Math.max(2, Math.sqrt(r) * 100)); // sqrt scale keeps small risks visible
+          for (let i = 0; ; i = (i + 1) % decisions.length) {
+            const { s, d } = decisions[i];
+            const t = s.transaction;
+            $("live-id").textContent = s.id;
+            $("live-amt").textContent = money(t.TransactionAmt);
+            $("live-meta").innerHTML = esc(s.title) + "<br>" + hour(t.TransactionDT) + " local";
+            $("live-tick").style.left = scale(d.thresholds.tau_allow) + "%";
+            $("live-risk").textContent = pct(d.risk, d.risk < 0.1 ? 1 : 0);
+            $("live-bar").style.width = scale(d.risk) + "%";
+            $("live-bar").style.backgroundColor = d.action === "ALLOW" ? "var(--mint)" : d.action === "BLOCK" ? "var(--red)" : "var(--amber)";
+            $("live-reasons").textContent = d.top_reasons.slice(0, 2).map((r) => `${r.direction === "raises" ? "▲" : "▼"} ${r.reason}`).join("   ");
+            const v = $("live-verdict");
+            v.innerHTML = `<span class="pill a-${d.action}">${actionLabel(d.action).toUpperCase()}</span>`;
+            const cf = d.counterfactuals[0];
+            if (cf) {
+              await wait(1600);
+              v.innerHTML = '<span class="yes">yes, if </span><span class="cond"></span><span class="cursor"></span>';
+              const cond = v.querySelector(".cond"), text = cf.label.replace(/^yes, if /, "");
+              if (reduced) cond.textContent = text;
+              else for (let k = 1; k <= text.length; k++) { cond.textContent = text.slice(0, k); await wait(26); }
+              $("live-risk").textContent = `${pct(d.risk, 1)} → ${pct(cf.risk, 1)}`;
+              $("live-bar").style.width = scale(cf.risk) + "%";
+              $("live-bar").style.backgroundColor = "var(--mint)";
+            }
+            await wait(3600);
+          }
+        }
+        hero();
+
+        // ---- results ----
+        api("/api/results").then((r) => {
+          const lgb = r.E1_detector.lightgbm, lr = r.E1_detector.logistic_regression;
+          $("s-prauc").textContent = lgb.pr_auc.toFixed(2);
+          $("s-lr").textContent = lr.pr_auc.toFixed(2);
+          $("s-recall").textContent = pct(lgb.recall_at_1pct_fpr, 0);
+          const rounds = r.E6_adversary.rounds;
+          $("s-evasion").textContent = `${pct(rounds[0].evasion, 0)} → ${pct(rounds[rounds.length - 1].evasion, 0)}`;
+          const P = r.E5_policy.policies;
+          const ours = P["Learned friction (ours)"], statics = ["B1 single threshold", "B2 static ladder", "B3 analytic (stale)"].map((k) => P[k].after_drift);
+          const bestStatic = Math.min(...statics);
+          $("s-drift").textContent = "−" + pct((bestStatic - ours.after_drift) / bestStatic, 0);
+
+          const colors = { "B1 single threshold": "#5b6b7e", "B2 static ladder": "#8a99ab", "B3 analytic (stale)": "#f5b85c",
+            "Oracle (knows the drift)": "#a99bff", "LinUCB bandit (plan)": "#5fb3ff", "Learned friction (ours)": "#3fdcaa" };
+          lineChart($("chart-policy"), Object.entries(P).map(([name, p]) => ({
+            name, values: p.curve, color: colors[name] || "#888", width: name.includes("ours") ? 3 : 1.6,
+            dash: name.startsWith("Oracle") ? "5 4" : "",
+          })), { marker: { at: r.E5_policy.drift_index / r.E5_policy.stream_length, label: "attackers pass step-up" },
+                 xLabel: "payments in the test stream →", label: "Cumulative cost by policy" });
+
+          barChart($("chart-adv"), rounds.map((x) => ({ label: "R" + x.round, value: +(x.evasion * 100).toFixed(1), color: x.round ? "#3fdcaa" : "#ff7a6b" })),
+            { yFormat: (v) => Math.round(v) + "%", max: 40, label: "Evasion rate by retraining round",
+              line: { values: rounds.map((x) => x.pr_auc), color: "#a99bff", min: 0.5, max: 1, format: (v) => v.toFixed(2) } });
+
+          const cf = r.E4_counterfactual;
+          $("kv").innerHTML = [
+            ["Flagged legit buyers with a valid \"yes, if\"", pct(cf.legit.validity, 0)],
+            ["Average features changed", cf.all.sparsity.toFixed(2)],
+            ["Calibration error (ECE)", r.E2_calibration.ece_isotonic.toFixed(4)],
+            ["Fraud in test stream", pct(r.data.test.fraud_rate, 1)],
+          ].map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join("");
+        }).catch(() => {});
+
+        // ---- waitlist (Premium early access) ----
+        const form = document.querySelector("[data-waitlist]");
+        const msg = form.querySelector(".waitlist-msg"), button = form.querySelector("button");
+        document.querySelector('[data-plan="premium"]').addEventListener("click", () => {
+          form.dataset.plan = "premium";
+          button.textContent = "Get Premium early access";
+          msg.className = "waitlist-msg"; msg.textContent = "Premium · $10/month at launch";
+          document.getElementById("join").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+          form.email.focus({ preventScroll: true });
         });
-
-        const joined = () => { try { return localStorage.getItem("yesif-joined"); } catch { return null; } };
-        const markJoined = (form, text) => {
-          form.classList.add("done");
-          form.querySelector("button").textContent = "You're on the list";
-          form.querySelector("button").disabled = true;
-          const msg = form.querySelector(".waitlist-msg");
-          msg.className = "waitlist-msg ok";
-          msg.textContent = text;
-        };
-        document.querySelectorAll("[data-waitlist]").forEach((form) => {
-          if (joined()) markJoined(form, "Thanks — we'll be in touch.");
-          form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const msg = form.querySelector(".waitlist-msg");
-            const button = form.querySelector("button");
-            const email = form.email.value.trim();
-            if (!form.email.checkValidity() || !email) {
-              msg.className = "waitlist-msg err";
-              msg.textContent = "Please enter a valid email address.";
-              form.email.focus();
-              return;
-            }
-            button.disabled = true;
-            button.textContent = "Joining…";
-            msg.className = "waitlist-msg";
-            msg.textContent = "";
-            try {
-              const res = await fetch("/api/waitlist", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, company: form.company.value }),
-              });
-              const data = await res.json().catch(() => ({}));
-              if (!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
-              try { localStorage.setItem("yesif-joined", "1"); } catch {}
-              const text = data.alreadyJoined ? "You're already on the list — see you soon." : "You're in. We'll email you when early access opens.";
-              document.querySelectorAll("[data-waitlist]").forEach((f) => markJoined(f, text));
-            } catch (err) {
-              button.disabled = false;
-              button.textContent = "Get early access";
-              msg.className = "waitlist-msg err";
-              msg.textContent = err.message;
-            }
-          });
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const email = form.email.value.trim();
+          if (!email || !form.email.checkValidity()) {
+            msg.className = "waitlist-msg err"; msg.textContent = "Please enter a valid email address."; form.email.focus(); return;
+          }
+          button.disabled = true; button.textContent = "Joining…";
+          try {
+            const data = await api("/api/waitlist", { method: "POST", body: JSON.stringify({ email, company: form.company.value, plan: form.dataset.plan || "free" }) });
+            button.textContent = "You're on the list";
+            msg.className = "waitlist-msg ok";
+            msg.textContent = form.dataset.plan === "premium" ? "You're on the Premium list. We'll email you when it opens."
+              : data.alreadyJoined ? "You're already on the list — see you soon." : "You're in. We'll email you when early access opens.";
+          } catch (err) {
+            button.disabled = false; button.textContent = form.dataset.plan === "premium" ? "Get Premium early access" : "Get early access";
+            msg.className = "waitlist-msg err"; msg.textContent = err.message || "Something went wrong. Please try again.";
+          }
         });
       })();
     </script>

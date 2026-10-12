@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>yes, if — API</title>
+    <meta name="description" content="The yes, if decisions API: one call returns allow, step up, hold or block, the reasons, and the cheapest change that would make it a yes.">
+    <meta name="theme-color" content="#0b111c">
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/site.css">
+    <style>
+      .doc { display: grid; grid-template-columns: 220px 1fr; gap: 40px; padding-top: 30px; }
+      .toc { position: sticky; top: 20px; align-self: start; display: grid; gap: 2px; }
+      .toc a { padding: 7px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: .9rem; }
+      .toc a:hover { color: var(--ink); background: rgba(238,242,246,.05); }
+      article h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(2.2rem, 5vw, 3.4rem); letter-spacing: -.045em; line-height: 1; }
+      article h2 { margin: 52px 0 10px; font-family: var(--display); font-size: 1.55rem; letter-spacing: -.025em; scroll-margin-top: 20px; }
+      article h3 { margin: 26px 0 8px; font-size: 1rem; }
+      article p, article li { color: var(--muted); max-width: 70ch; }
+      article strong { color: var(--ink); font-weight: 500; }
+      .ep { display: inline-flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: .9rem; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: rgba(17,26,42,.7); }
+      .ep b { color: var(--mint); font-weight: 500; }
+      pre { margin: 12px 0; padding: 16px 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: #080d16; font: .82rem/1.6 var(--mono); color: #cfd8e3; }
+      code { font-family: var(--mono); font-size: .86em; color: var(--ink); }
+      table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: 10px; }
+      th, td { text-align: left; padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
+      th { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 500; border-top: 0; }
+      td { color: var(--muted); }
+      td:first-child { color: var(--ink); font-family: var(--mono); font-size: .82rem; white-space: nowrap; }
+      .tw { overflow-x: auto; }
+      .try { margin-top: 14px; }
+      @media (max-width: 860px) { .doc { grid-template-columns: 1fr; } .toc { position: static; grid-auto-flow: column; overflow-x: auto; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-header">
+        <a class="logo" href="/" aria-label="yes, if home">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g stroke-linecap="round" stroke-width="5" fill="none"><circle cx="20" cy="22" r="6" stroke="#eef2f6"/><path d="M30 30 47 10M14 54 29 35" stroke="#eef2f6"/><path d="M25 27 40 39" stroke="#3fdcaa"/></g><circle cx="44" cy="42" r="7" fill="#3fdcaa"/></svg>
+          <span>yes<b>,</b> if</span>
+        </a>
+        <nav class="nav" aria-label="Main">
+          <a class="hide-sm" href="/">Home</a>
+          <a href="/app">Console</a>
+          <a href="/docs" aria-current="page">API</a>
+        </nav>
+      </header>
+
+      <div class="doc">
+        <nav class="toc" aria-label="On this page">
+          <a href="#quickstart">Quickstart</a>
+          <a href="#decide">POST /api/decide</a>
+          <a href="#fields">Transaction fields</a>
+          <a href="#response">Analyst response</a>
+          <a href="#paypal">PayPal plans</a>
+          <a href="#checkout">Checkout endpoints</a>
+          <a href="#other">Other endpoints</a>
+          <a href="#limits">Limits &amp; safety</a>
+        </nav>
+
+        <article>
+          <p class="eyebrow">Decisions API · v2</p>
+          <h1>One call. A decision and a way to yes.</h1>
+          <p style="margin-top:18px">Send a payment, get back <strong>allow, step up, hold or block</strong>. In the analyst view you also get the calibrated fraud probability, the reasons, and the cheapest changes that would get it approved, each with the PayPal calls that would carry it out. Interactive schema: <a href="/api/docs">/api/docs</a>.</p>
+
+          <h2 id="quickstart">Quickstart</h2>
+          <pre id="curl">curl -X POST "https://yes-if-silk.vercel.app/api/decide?view=analyst" \
+  -H "Content-Type: application/json" \
+  -d '{"TransactionAmt": 834, "TransactionDT": 13910400, "card6": "credit",
+       "prior_cnt": 30, "prior_mean_amt": 95, "prev_dt": 13800000,
+       "card_device_prior": 12, "DeviceInfo_distinct_uids": 1, "dist1": 8}'</pre>
+          <button class="btn btn-sm try" id="try">Run it here</button>
+          <pre id="out" hidden></pre>
+
+          <h2 id="decide">POST /api/decide</h2>
+          <p><span class="ep"><b>POST</b> /api/decide?view=user|analyst</span></p>
+          <ul>
+            <li><strong>view=user</strong> (default): <code>{"action", "guidance"}</code> only. No scores, thresholds or exact counterfactuals, so the decision boundary cannot be mapped from the buyer side.</li>
+            <li><strong>view=analyst</strong>: everything below. Rate-limited to 60 requests a minute per client.</li>
+          </ul>
+
+          <h2 id="fields">Transaction fields</h2>
+          <p>Only <code>TransactionAmt</code> and <code>TransactionDT</code> are required. History and graph fields would come from your feature store; anything you leave out is filled from training-set defaults (per email domain where known).</p>
+          <div class="tw"><table>
+            <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>TransactionAmt</td><td>Amount in USD (required)</td></tr>
+              <tr><td>TransactionDT</td><td>Seconds from a reference point; hour of day is <code>(DT // 3600) % 24</code> (required)</td></tr>
+              <tr><td>card6</td><td><code>debit</code> or <code>credit</code>; actionable</td></tr>
+              <tr><td>card4, ProductCD, DeviceType, P_emaildomain</td><td>Card network, product type, mobile/desktop, buyer email domain</td></tr>
+              <tr><td>dist1</td><td>Distance between billing address and the payment's location (km)</td></tr>
+              <tr><td>prior_cnt, prior_mean_amt, prev_dt</td><td>Earlier payments on this card, their mean amount, and the previous payment's timestamp</td></tr>
+              <tr><td>card_device_prior</td><td>How many times this card has used this device before</td></tr>
+              <tr><td>DeviceInfo_distinct_uids, DeviceInfo_prior_cnt</td><td>Distinct cards and payments seen on this device so far (ring signal)</td></tr>
+              <tr><td>P_emaildomain_*, addr1_*</td><td>The same counts for the email domain and billing region</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="response">Analyst response</h2>
+          <pre>{
+  "action": "HOLD",                     // ALLOW | STEP_UP | HOLD | BLOCK
+  "guidance": "This payment is being reviewed. You'll hear back shortly.",
+  "risk": 0.1316,                       // calibrated fraud probability
+  "thresholds": {"tau_allow": 0.0286, "tau_hold": 1.0, "tau_block": 1.0},
+  "top_reasons": [{"reason": "Time of day", "impact": 0.833, "direction": "raises"},
+                  {"reason": "Amount vs. this card's usual spend", "impact": 0.814, "direction": "raises"}, …],
+  "counterfactuals": [{
+    "label": "yes, if it goes through 8 hours later",
+    "change": {"amount_mult": 1.0, "delay_h": 8, "card6": "credit"},
+    "risk": 0.018, "cost": 0.167, "plausible": true, "amount": 834.0,
+    "paypal_plan": [{"kind": "wait", "minutes": 480, …}, {"kind": "capture", "paypal_call": true, …}]
+  }, …],
+  "paypal_plan": [{"kind": "review", …}, {"kind": "capture", "amount": 834.0, "paypal_call": true, …}],
+  "transaction": { …the payment with defaults filled in… },
+  "latency_ms": 4.1
+}</pre>
+          <p><strong>How the action is chosen.</strong> Below <code>tau_allow</code> the payment is allowed. Above it, a learned policy picks the cheapest friction (step-up, hold or block) from the calibrated risk, the amount, and what it has learned about how often each friction catches fraud or loses a good customer. <code>tau_block</code> forces a block.</p>
+          <p><strong>Counterfactuals</strong> come from a grid of 83 changes: pay 10–90% now, delay 1–24 hours, switch debit/credit. Valid options fall under <code>tau_allow</code>; they are ranked by change cost (<code>|log amount ratio| + 0.5 × days delayed + 0.3 × card switch</code>) and kept diverse. They describe the model, not causal truth.</p>
+
+          <h2 id="paypal">PayPal plans</h2>
+          <p>Every plan assumes a PayPal order created with intent <code>AUTHORIZE</code>. Steps marked <code>paypal_call</code> map to the Payments API; the others are handled by your app.</p>
+          <div class="tw"><table>
+            <thead><tr><th>Step</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>capture</td><td><code>POST /v2/payments/authorizations/{id}/capture</code>; partial captures send <code>final_capture: false</code></td></tr>
+              <tr><td>void</td><td><code>POST /v2/payments/authorizations/{id}/void</code></td></tr>
+              <tr><td>verify</td><td>One-time code or app confirmation, then continue</td></tr>
+              <tr><td>review</td><td>Keep the authorization; an analyst approves (capture) or rejects (void)</td></tr>
+              <tr><td>wait</td><td>Keep the authorization and capture after <code>minutes</code></td></tr>
+              <tr><td>switch_funding</td><td>Ask the buyer to approve again with a different funding source</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="checkout">Checkout endpoints</h2>
+          <p>Used by the <a href="/app#checkout">sandbox checkout</a>. Amounts always come from the server-side catalog, never from the browser.</p>
+          <div class="tw"><table>
+            <thead><tr><th>Endpoint</th><th>Does</th></tr></thead>
+            <tbody>
+              <tr><td>GET /api/checkout/config</td><td>Public client id, catalog and demo buyers</td></tr>
+              <tr><td>POST /api/checkout/quote</td><td><code>{product, persona}</code> → what the buyer sees and what the merchant sees</td></tr>
+              <tr><td>POST /api/checkout/orders</td><td><code>{product, persona, offer?}</code> → creates a PayPal AUTHORIZE order (403 if blocked with no offer)</td></tr>
+              <tr><td>POST …/orders/{id}/authorize</td><td>Checks approval and amount, authorizes, runs the plan until it needs the buyer, a reviewer or time</td></tr>
+              <tr><td>POST …/orders/{id}/continue</td><td><code>{code}</code> for verification, <code>{review: approve|reject}</code> for holds, <code>{}</code> to skip a wait in the sandbox</td></tr>
+              <tr><td>GET …/orders/{id}</td><td>Current status and captures</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="other">Other endpoints</h2>
+          <div class="tw"><table>
+            <tbody>
+              <tr><td>GET /api/health</td><td>Model version, metrics, thresholds and policy</td></tr>
+              <tr><td>GET /api/samples</td><td>Six labelled test-set payments (clean, large, borderline, takeover, ring, card testing)</td></tr>
+              <tr><td>GET /api/results</td><td>Every experiment result (E1–E7, fairness) behind this site</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="limits">Limits &amp; safety</h2>
+          <ul>
+            <li>Analyst view: 60 requests per minute per client. Checkout orders: 20 per minute.</li>
+            <li>PayPal <strong>sandbox only</strong>: the client refuses any non-sandbox host.</li>
+            <li>The model is trained on synthetic data and friction outcomes are simulated. Do not use it for real payment decisions.</li>
+            <li>No LLM is involved in any decision.</li>
+          </ul>
+        </article>
+      </div>
+
+      <footer class="site-footer">
+        <span>yes, if API</span>
+        <span><a href="https://github.com/spongebob2005/yes-if-counterfactual-risk-engine">GitHub</a> · MIT</span>
+      </footer>
+    </div>
+    <script src="/assets/common.js"></script>
+    <script>
+      document.getElementById("try").addEventListener("click", async () => {
+        const out = document.getElementById("out");
+        out.hidden = false; out.textContent = "…";
+        const body = { TransactionAmt: 834, TransactionDT: 13910400, card6: "credit", prior_cnt: 30, prior_mean_amt: 95,
+          prev_dt: 13800000, card_device_prior: 12, DeviceInfo_distinct_uids: 1, dist1: 8 };
+        try {
+          const r = await window.yesif.api("/api/decide?view=analyst", { method: "POST", body: JSON.stringify(body) });
+          delete r.transaction;
+          r.counterfactuals.forEach((c) => delete c.paypal_plan);
+          out.textContent = JSON.stringify(r, null, 2);
+        } catch (e) { out.textContent = e.message; }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>yes, if — Console</title>
+    <meta name="description" content="Live console for the yes, if risk engine: decisions, counterfactual explorer, PayPal sandbox checkout, policy and adversary results.">
+    <meta name="theme-color" content="#0b111c">
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/site.css">
+    <style>
+      .tabs { display: flex; gap: 4px; overflow-x: auto; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgba(17,26,42,.6); scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tabs a { flex: none; padding: 9px 15px; border-radius: 999px; color: var(--muted); font-size: .88rem; text-decoration: none; }
+      .tabs a[aria-selected="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+      .panel { display: none; padding-top: 28px; }
+      .panel.on { display: block; }
+      .panel-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+      .panel-head h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(1.8rem, 3.6vw, 2.6rem); letter-spacing: -.04em; line-height: 1.05; }
+      .panel-head p { margin: 0; max-width: 54ch; color: var(--muted); }
+      .grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 12px; align-items: start; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+      .stack { display: grid; gap: 12px; }
+      h2.t { margin: 4px 0 12px; font-family: var(--display); font-size: 1.2rem; letter-spacing: -.02em; }
+
+      .samples { display: grid; gap: 6px; }
+      .sample { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+      .sample:hover { background: rgba(238,242,246,.04); }
+      .sample[aria-pressed="true"] { border-color: rgba(63,220,170,.55); background: rgba(63,220,170,.06); }
+      .sample small { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }
+      .sample .amt { font-family: var(--mono); font-size: .86rem; }
+      .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .form .wide { grid-column: 1 / -1; }
+      .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+      .result-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .big-risk { font-family: var(--display); font-weight: 800; font-size: 2.6rem; letter-spacing: -.04em; line-height: 1; }
+      .views { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+      .view { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+      .view p { margin: 8px 0 0; font-size: .92rem; }
+      .reasons { display: grid; gap: 9px; margin-top: 10px; }
+      .reason { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center; font-size: .88rem; }
+      .reason .rb { height: 6px; border-radius: 4px; background: rgba(238,242,246,.06); position: relative; }
+      .reason .rb i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+      .opt { border-top: 1px solid var(--line); padding: 14px 0 4px; }
+      .opt:first-child { border-top: 0; padding-top: 4px; }
+      .opt-title { font-weight: 600; }
+      .opt-title .yes { color: var(--mint); font-family: var(--mono); font-weight: 500; }
+      .opt-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; color: var(--muted); font-family: var(--mono); font-size: .74rem; }
+      ol.plan { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: .86rem; }
+      ol.plan li + li { margin-top: 4px; }
+      ol.plan .k { font-family: var(--mono); font-size: .72rem; color: var(--ink); text-transform: uppercase; margin-right: 6px; }
+      ol.plan .pp { color: #5fb3ff; font-family: var(--mono); font-size: .68rem; margin-left: 6px; }
+      .empty { color: var(--muted); font-size: .92rem; }
+
+      .slider-row { display: grid; gap: 6px; margin-top: 16px; }
+      .slider-row .top { display: flex; justify-content: space-between; font-size: .88rem; }
+      .slider-row .top b { font-family: var(--mono); font-weight: 500; }
+      .seg { display: inline-flex; padding: 3px; border: 1px solid var(--line-2); border-radius: 999px; }
+      .seg button { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: .86rem; }
+      .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+      .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+      .compare .card { padding: 16px; }
+
+      .choice { display: grid; gap: 6px; }
+      .choice button { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+      .choice button[aria-pressed="true"] { border-color: rgba(63,220,170,.55); background: rgba(63,220,170,.06); }
+      .choice button span:last-child { color: var(--muted); font-family: var(--mono); font-size: .86rem; }
+      .buyer { border: 1px solid var(--line-2); border-radius: 16px; padding: 18px; background: rgba(238,242,246,.02); }
+      .buyer .msg { font-family: var(--display); font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; margin-top: 8px; }
+      .offers { display: grid; gap: 6px; margin-top: 12px; }
+      .offers button { padding: 11px 13px; border: 1px solid rgba(63,220,170,.35); border-radius: 10px; background: rgba(63,220,170,.05); color: var(--ink); text-align: left; cursor: pointer; font: inherit; font-size: .92rem; }
+      .offers button[aria-pressed="true"] { background: rgba(63,220,170,.16); border-color: var(--mint); }
+      #paypal-buttons { margin-top: 16px; min-height: 10px; background: #fff0; }
+      .status { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-2); font-size: .9rem; color: var(--muted); }
+      .status[data-state="ok"] { border-color: rgba(63,220,170,.45); color: var(--mint); background: rgba(63,220,170,.06); }
+      .status[data-state="warn"] { border-color: rgba(245,184,92,.4); color: var(--amber); background: rgba(245,184,92,.06); }
+      .status[data-state="err"] { border-color: rgba(255,122,107,.4); color: var(--red); background: rgba(255,122,107,.06); }
+      .verify { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+      .verify .input { max-width: 180px; font-family: var(--mono); letter-spacing: .2em; }
+
+      table.t { width: 100%; border-collapse: collapse; font-size: .88rem; }
+      table.t th, table.t td { text-align: left; padding: 10px 10px; border-top: 1px solid var(--line); }
+      table.t th { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 500; border-top: 0; }
+      table.t td.n { font-family: var(--mono); text-align: right; }
+      table.t th.n { text-align: right; }
+      table.t tr.ours td { color: var(--mint); }
+      .table-wrap { overflow-x: auto; }
+      .note { margin-top: 12px; color: var(--muted); font-size: .86rem; }
+
+      @media (max-width: 900px) { .grid, .grid-2 { grid-template-columns: 1fr; } }
+      @media (max-width: 560px) { .form, .views, .compare { grid-template-columns: 1fr; } .reason { grid-template-columns: 1fr 80px; } }
+    </style>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-header">
+        <a class="logo" href="/" aria-label="yes, if home">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g stroke-linecap="round" stroke-width="5" fill="none"><circle cx="20" cy="22" r="6" stroke="#eef2f6"/><path d="M30 30 47 10M14 54 29 35" stroke="#eef2f6"/><path d="M25 27 40 39" stroke="#3fdcaa"/></g><circle cx="44" cy="42" r="7" fill="#3fdcaa"/></svg>
+          <span>yes<b>,</b> if</span>
+        </a>
+        <nav class="nav" aria-label="Main">
+          <a class="hide-sm" href="/">Home</a>
+          <a href="/app" aria-current="page">Console</a>
+          <a href="/docs">API</a>
+        </nav>
+      </header>
+
+      <div class="tabs" role="tablist" aria-label="Console sections">
+        <a href="#decision" role="tab">Live decision</a>
+        <a href="#explorer" role="tab">Counterfactual explorer</a>
+        <a href="#checkout" role="tab">Sandbox checkout</a>
+        <a href="#policy" role="tab">Policy battle</a>
+        <a href="#adversary" role="tab">Adversary arena</a>
+        <a href="#network" role="tab">Network view</a>
+        <a href="#model" role="tab">Model card</a>
+      </div>
+
+      <!-- ===================== Live decision ===================== -->
+      <section class="panel" id="decision" role="tabpanel">
+        <div class="panel-head">
+          <h1>Score it, explain it, find the yes.</h1>
+          <p>Pick a real test-set payment or build your own. The same request returns a coarse buyer view and a full analyst view.</p>
+        </div>
+        <div class="grid">
+          <div class="stack">
+            <div class="card pad">
+              <div class="label">Sample payments</div>
+              <div class="samples" id="sample-list" style="margin-top:12px"></div>
+            </div>
+            <div class="card pad">
+              <div class="label">Custom payment</div>
+              <form class="form" id="custom" style="margin-top:14px">
+                <div class="field"><label for="f-amt">Amount ($)</label><input class="input" id="f-amt" type="number" min="1" step="0.01" value="250"></div>
+                <div class="field"><label for="f-hour">Local time</label><select class="input" id="f-hour"></select></div>
+                <div class="field"><label for="f-usual">Card's usual spend ($)</label><input class="input" id="f-usual" type="number" min="1" step="1" value="60"></div>
+                <div class="field"><label for="f-count">Earlier payments on card</label><input class="input" id="f-count" type="number" min="0" step="1" value="25"></div>
+                <div class="field"><label for="f-since">Minutes since last payment</label><input class="input" id="f-since" type="number" min="0" step="1" value="2880"></div>
+                <div class="field"><label for="f-dist">Distance from billing (km)</label><input class="input" id="f-dist" type="number" min="0" step="1" value="10"></div>
+                <div class="field"><label for="f-seen">Times card used this device</label><input class="input" id="f-seen" type="number" min="0" step="1" value="12"></div>
+                <div class="field"><label for="f-shared">Cards seen on this device</label><input class="input" id="f-shared" type="number" min="1" step="1" value="1"></div>
+                <div class="field"><label for="f-card6">Funding source</label><select class="input" id="f-card6"><option value="debit">Debit</option><option value="credit">Credit</option></select></div>
+                <div class="field"><label for="f-email">Email domain</label><select class="input" id="f-email"><option>gmail.com</option><option>yahoo.com</option><option>outlook.com</option><option>icloud.com</option><option>protonmail.com</option><option>mail.ru</option><option>anonmail.net</option></select></div>
+                <div class="row-actions wide"><button class="btn" type="submit">Decide</button></div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card pad" id="result" aria-live="polite">
+            <p class="empty">Choose a payment to see the decision.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== Explorer ===================== -->
+      <section class="panel" id="explorer" role="tabpanel">
+        <div class="panel-head">
+          <h1>What would make this a yes?</h1>
+          <p>Move only what a buyer can change: how much is paid now, when, and with which card. Everything else (device, history, graph signals) stays fixed.</p>
+        </div>
+        <div class="grid">
+          <div class="card pad">
+            <div class="field"><label for="x-sample">Payment</label><select class="input" id="x-sample"></select></div>
+            <div class="slider-row"><div class="top"><span>Paid now</span><b id="x-amt-v">100%</b></div><input type="range" id="x-amt" min="10" max="100" step="5" value="100"></div>
+            <div class="slider-row"><div class="top"><span>Goes through later</span><b id="x-delay-v">0 h</b></div><input type="range" id="x-delay" min="0" max="24" step="1" value="0"></div>
+            <div class="slider-row"><div class="top"><span>Funding source</span></div><div class="seg" id="x-card6"><button type="button" data-v="debit">Debit</button><button type="button" data-v="credit">Credit</button></div></div>
+            <div class="compare">
+              <div class="card"><div class="label">Original</div><div class="big-risk num" id="x-base">—</div><div id="x-base-a" style="margin-top:8px"></div></div>
+              <div class="card"><div class="label">With your changes</div><div class="big-risk num" id="x-now">—</div><div id="x-now-a" style="margin-top:8px"></div></div>
+            </div>
+            <p class="note">Approval line: <span class="mono" id="x-tau">—</span>. Scores are the model's calibrated fraud probability; counterfactuals describe the model, not causal truth.</p>
+          </div>
+          <div class="card pad">
+            <div class="label">Engine's cheapest options</div>
+            <div id="x-options" style="margin-top:10px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== Checkout ===================== -->
+      <section class="panel" id="checkout" role="tabpanel">
+        <div class="panel-head">
+          <h1>Decision to PayPal, end to end.</h1>
+          <p>The engine scores the buyer before PayPal opens, then runs its plan on the authorization: capture, verify, review, or a "yes, if". PayPal <strong>sandbox</strong> only: use a sandbox personal account, no real money moves.</p>
+        </div>
+        <div class="grid">
+          <div class="stack">
+            <div class="card pad"><div class="label">1 · Product</div><div class="choice" id="products" style="margin-top:12px"></div></div>
+            <div class="card pad"><div class="label">2 · Who is buying</div><div class="choice" id="personas" style="margin-top:12px"></div></div>
+          </div>
+          <div class="stack">
+            <div class="card pad">
+              <div class="label">3 · What the buyer sees</div>
+              <div class="buyer" id="buyer" style="margin-top:12px"><p class="empty">Loading…</p></div>
+              <div id="paypal-buttons"></div>
+              <div class="status" id="co-status" role="status" hidden></div>
+            </div>
+            <div class="card pad">
+              <div class="label">What the merchant sees</div>
+              <div id="merchant" style="margin-top:10px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== Policy ===================== -->
+      <section class="panel" id="policy" role="tabpanel">
+        <div class="panel-head">
+          <h1>When the world changes, friction matters.</h1>
+          <p>Every policy replays the same test stream. Halfway through, attackers learn to pass one-time passcodes and step-up's catch rate drops from 85% to 40%.</p>
+        </div>
+        <div class="card pad"><div id="p-chart"></div></div>
+        <div class="card pad" style="margin-top:12px">
+          <div class="table-wrap"><table class="t" id="p-table"></table></div>
+          <p class="note" id="p-note"></p>
+        </div>
+      </section>
+
+      <!-- ===================== Adversary ===================== -->
+      <section class="panel" id="adversary" role="tabpanel">
+        <div class="panel-head">
+          <h1>An attacker that keeps probing.</h1>
+          <p>A black-box attacker controls amount (keeping at least half), timing (up to 24h) and funding source. Each round, its successful attacks are added to training.</p>
+        </div>
+        <div class="grid-2">
+          <div class="card pad"><div class="label">E6 · evasion by retraining round (line: clean PR-AUC)</div><div id="a-rounds" style="margin-top:12px"></div></div>
+          <div class="card pad"><div class="label">E7 · evasion vs. query budget on the deployed model</div><div id="a-budget" style="margin-top:12px"></div></div>
+        </div>
+        <p class="note">Perturbations happen in feature space, which is a simplification; real attackers face stricter constraints. Exact scores and counterfactuals are analyst-only and rate-limited for this reason.</p>
+      </section>
+
+      <!-- ===================== Network ===================== -->
+      <section class="panel" id="network" role="tabpanel">
+        <div class="panel-head">
+          <h1>One device, many cards.</h1>
+          <p>Shared-entity features count how many distinct cards have touched a device, email domain or billing region so far, causally, in time order. This is the ring behind the "ring" sample.</p>
+        </div>
+        <div class="card pad"><div id="n-graph"></div><p class="note" id="n-note"></p></div>
+      </section>
+
+      <!-- ===================== Model card ===================== -->
+      <section class="panel" id="model" role="tabpanel">
+        <div class="panel-head">
+          <h1>Model card.</h1>
+          <p>Detector quality, calibration, the value of graph features, counterfactual quality and a fairness check, all on the held-out, later-in-time test split.</p>
+        </div>
+        <div class="grid-2">
+          <div class="card pad"><div class="label">E1 · detector (test)</div><div class="table-wrap"><table class="t" id="m-e1" style="margin-top:8px"></table></div></div>
+          <div class="card pad"><div class="label">E2 · reliability after isotonic calibration</div><div id="m-rel" style="margin-top:12px"></div></div>
+          <div class="card pad"><div class="label">E3 · graph features &amp; E4 · counterfactuals</div><div class="table-wrap"><table class="t" id="m-e34" style="margin-top:8px"></table></div></div>
+          <div class="card pad"><div class="label">Fairness · false-positive rate by segment</div><div class="table-wrap"><table class="t" id="m-fair" style="margin-top:8px"></table></div></div>
+        </div>
+        <p class="note" id="m-note"></p>
+      </section>
+
+      <footer class="site-footer">
+        <span>yes, if console</span>
+        <span>Synthetic data · simulated friction outcomes · PayPal sandbox</span>
+      </footer>
+    </div>
+
+    <script src="/assets/common.js"></script>
+    <script>
+      (() => {
+        const { api, money, pct, hour, actionLabel, esc, lineChart, barChart } = window.yesif;
+        const $ = (id) => document.getElementById(id);
+        const DAY = 86400;
+        let SAMPLES = [], RESULTS = null, TAU = null;
+        const loaded = {};
+
+        // ---------- tabs ----------
+        const tabs = [...document.querySelectorAll(".tabs a")];
+        function show() {
+          const id = (location.hash || "#decision").slice(1);
+          const target = document.getElementById(id) && document.getElementById(id).classList.contains("panel") ? id : "decision";
+          document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("on", p.id === target));
+          tabs.forEach((t) => t.setAttribute("aria-selected", String(t.getAttribute("href") === "#" + target)));
+          if (!loaded[target]) { loaded[target] = true; (init[target] || (() => {}))(); }
+        }
+        window.addEventListener("hashchange", show);
+
+        const decide = (tx, view = "analyst") => api(`/api/decide?view=${view}`, { method: "POST", body: JSON.stringify(tx) });
+        const pctRisk = (r) => pct(r, r < 0.1 ? 2 : 1);
+        const pill = (a) => `<span class="pill a-${a}">${actionLabel(a).toUpperCase()}</span>`;
+        const planList = (steps) => `<ol class="plan">${steps.map((s) => `<li><span class="k">${esc(s.kind.replace("_", " "))}</span>${esc(s.description)}${s.amount != null ? " · " + money(s.amount) : ""}${s.paypal_call ? '<span class="pp">PayPal API</span>' : ""}</li>`).join("")}</ol>`;
+        const scale = (r) => Math.min(100, Math.max(1.5, Math.sqrt(r) * 100));
+        const meter = (r, tau, color) => `<div class="bar" style="margin-top:14px"><i style="width:${scale(r)}%;background:${color}"></i><span class="tick" style="left:${scale(tau)}%" title="Approval line"></span></div>`;
+        const colorFor = (a) => ({ ALLOW: "var(--mint)", STEP_UP: "var(--amber)", HOLD: "var(--violet)", BLOCK: "var(--red)" })[a];
+
+        // ---------- live decision ----------
+        function renderDecision(analyst, user, title) {
+          const t = analyst.transaction;
+          const maxImpact = Math.max(...analyst.top_reasons.map((r) => Math.abs(r.impact)), 0.01);
+          $("result").innerHTML = `
+            <div class="result-top">
+              <div><div class="label">${esc(title)}</div><div class="big-risk num" style="margin-top:8px">${pctRisk(analyst.risk)}</div><div class="muted" style="font-size:.84rem">fraud probability · approval line ${pctRisk(analyst.thresholds.tau_allow)}</div></div>
+              <div style="text-align:right">${pill(analyst.action)}<div class="muted mono" style="font-size:.72rem;margin-top:8px">${money(t.TransactionAmt)} · ${hour(t.TransactionDT)} · ${esc(t.card6)} · ${analyst.latency_ms} ms</div></div>
+            </div>
+            ${meter(analyst.risk, analyst.thresholds.tau_allow, colorFor(analyst.action))}
+            <div class="views">
+              <div class="view"><div class="label">Buyer view (coarse)</div><p>${esc(user.guidance)}</p></div>
+              <div class="view"><div class="label">PayPal plan</div>${planList(analyst.paypal_plan)}</div>
+            </div>
+            <h2 class="t" style="margin-top:22px">Why</h2>
+            <div class="reasons">${analyst.top_reasons.map((r) => {
+              const w = (Math.abs(r.impact) / maxImpact) * 50;
+              const style = r.impact > 0 ? `left:50%;width:${w}%;background:var(--red)` : `right:50%;width:${w}%;background:var(--mint)`;
+              return `<div class="reason"><span>${r.direction === "raises" ? "▲" : "▼"} ${esc(r.reason)}</span><span class="rb"><i style="${style}"></i></span></div>`;
+            }).join("")}</div>
+            <h2 class="t" style="margin-top:22px">yes, if…</h2>
+            ${analyst.action === "ALLOW" ? '<p class="empty">Already approved: no change needed.</p>'
+              : analyst.counterfactuals.length ? analyst.counterfactuals.map((o) => `
+                <div class="opt"><div class="opt-title"><span class="yes">yes, if</span> ${esc(o.label.replace(/^yes, if /, ""))}</div>
+                <div class="opt-meta"><span>risk ${pctRisk(o.risk)}</span><span>change cost ${o.cost.toFixed(2)}</span><span>${o.plausible ? "within card history" : "outside card history"}</span></div>
+                ${planList(o.paypal_plan)}</div>`).join("")
+              : '<p class="empty">No change within the allowed range (≥10% of the amount, ≤24h, debit or credit) gets this under the approval line. That is the decision boundary working.</p>'}
+          `;
+        }
+
+        async function runDecision(tx, title) {
+          $("result").innerHTML = '<p class="empty">Scoring…</p>';
+          try {
+            const [analyst, user] = await Promise.all([decide(tx, "analyst"), decide(tx, "user")]);
+            renderDecision(analyst, user, title);
+          } catch (e) {
+            $("result").innerHTML = `<p class="empty">${esc(e.message)}</p>`;
+          }
+        }
+
+        function fillCustom(t) {
+          $("f-amt").value = t.TransactionAmt;
+          $("f-hour").value = Math.floor(t.TransactionDT / 3600) % 24;
+          $("f-usual").value = Math.round(t.prior_mean_amt);
+          $("f-count").value = t.prior_cnt;
+          $("f-since").value = t.prev_dt != null ? Math.round((t.TransactionDT - t.prev_dt) / 60) : 0;
+          $("f-dist").value = Math.round(t.dist1);
+          $("f-seen").value = t.card_device_prior;
+          $("f-shared").value = Math.max(1, t.DeviceInfo_distinct_uids);
+          $("f-card6").value = t.card6;
+          const email = $("f-email");
+          if (![...email.options].some((o) => o.value === t.P_emaildomain)) email.add(new Option(t.P_emaildomain));
+          email.value = t.P_emaildomain;
+        }
+
+        function customTx() {
+          const dt = 160 * DAY + Number($("f-hour").value) * 3600 + 900;
+          const count = Number($("f-count").value), since = Number($("f-since").value), shared = Number($("f-shared").value);
+          const seen = Number($("f-seen").value);
+          return {
+            TransactionAmt: Number($("f-amt").value), TransactionDT: dt, card6: $("f-card6").value,
+            P_emaildomain: $("f-email").value, dist1: Number($("f-dist").value),
+            prior_cnt: count, prior_mean_amt: Number($("f-usual").value), prev_dt: count > 0 ? dt - since * 60 : null,
+            card_device_prior: Math.min(seen, count), DeviceInfo_distinct_uids: shared, DeviceInfo_prior_cnt: Math.max(seen, shared - 1),
+          };
+        }
+
+        const init = {};
+        init.decision = async () => {
+          for (let h = 0; h < 24; h++) $("f-hour").add(new Option(String(h).padStart(2, "0") + ":00", h));
+          $("f-hour").value = 14;
+          const list = $("sample-list");
+          list.innerHTML = SAMPLES.map((s, i) => `<button class="sample" type="button" data-i="${i}" aria-pressed="false"><span>${esc(s.title)}<small>${s.id} · ${s.is_fraud ? "labelled fraud" : "labelled legitimate"}</small></span><span class="amt">${money(s.transaction.TransactionAmt)}</span></button>`).join("");
+          list.addEventListener("click", (e) => {
+            const b = e.target.closest(".sample"); if (!b) return;
+            list.querySelectorAll(".sample").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+            const s = SAMPLES[b.dataset.i];
+            fillCustom(s.transaction);
+            runDecision(s.transaction, `${s.id} · ${s.title}`);
+          });
+          $("custom").addEventListener("submit", (e) => {
+            e.preventDefault();
+            list.querySelectorAll(".sample").forEach((x) => x.setAttribute("aria-pressed", "false"));
+            runDecision(customTx(), "Custom payment");
+          });
+          list.querySelector('[data-i="1"]')?.click();
+        };
+
+        // ---------- explorer ----------
+        init.explorer = () => {
+          const sel = $("x-sample");
+          SAMPLES.forEach((s, i) => sel.add(new Option(`${s.id} · ${s.title} · ${money(s.transaction.TransactionAmt)}`, i)));
+          sel.value = String(Math.max(0, SAMPLES.findIndex((s) => s.key === "large")));
+          let card6 = "debit", timer = null, seq = 0;
+          const seg = $("x-card6");
+          const setCard = (v) => { card6 = v; seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v))); };
+          async function base() {
+            const s = SAMPLES[sel.value];
+            setCard(s.transaction.card6);
+            $("x-amt").value = 100; $("x-delay").value = 0;
+            const d = await decide(s.transaction);
+            TAU = d.thresholds.tau_allow;
+            $("x-tau").textContent = pctRisk(TAU);
+            $("x-base").textContent = pctRisk(d.risk); $("x-base-a").innerHTML = pill(d.action);
+            $("x-now").textContent = pctRisk(d.risk); $("x-now-a").innerHTML = pill(d.action);
+            $("x-options").innerHTML = d.action === "ALLOW" ? '<p class="empty">Already approved.</p>' : d.counterfactuals.length
+              ? d.counterfactuals.map((o) => `<div class="opt"><div class="opt-title"><span class="yes">yes, if</span> ${esc(o.label.replace(/^yes, if /, ""))}</div><div class="opt-meta"><span>risk ${pctRisk(o.risk)}</span><span>cost ${o.cost.toFixed(2)}</span><button class="btn btn-ghost btn-sm" data-apply='${JSON.stringify(o.change)}'>Apply</button></div></div>`).join("")
+              : '<p class="empty">No allowed change gets under the approval line.</p>';
+            update();
+          }
+          function update() {
+            $("x-amt-v").textContent = $("x-amt").value + "%";
+            $("x-delay-v").textContent = $("x-delay").value + " h";
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+              const s = SAMPLES[sel.value], t = s.transaction, mine = ++seq;
+              const tx = { ...t, TransactionAmt: Math.round(t.TransactionAmt * $("x-amt").value) / 100,
+                TransactionDT: t.TransactionDT + Number($("x-delay").value) * 3600, card6 };
+              try {
+                const d = await decide(tx);
+                if (mine !== seq) return;
+                $("x-now").textContent = pctRisk(d.risk); $("x-now-a").innerHTML = pill(d.action);
+              } catch (e) { $("x-now-a").textContent = e.message; }
+            }, 220);
+          }
+          $("x-options").addEventListener("click", (e) => {
+            const b = e.target.closest("[data-apply]"); if (!b) return;
+            const c = JSON.parse(b.dataset.apply);
+            $("x-amt").value = Math.round(c.amount_mult * 100); $("x-delay").value = c.delay_h; setCard(c.card6); update();
+          });
+          seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { setCard(b.dataset.v); update(); } });
+          $("x-amt").addEventListener("input", update);
+          $("x-delay").addEventListener("input", update);
+          sel.addEventListener("change", base);
+          base();
+        };
+
+        // ---------- checkout ----------
+        init.checkout = async () => {
+          const status = $("co-status");
+          const setStatus = (text, state = "") => { status.hidden = false; status.dataset.state = state; status.innerHTML = text; };
+          let cfg, product, persona, offer = null, quote = null, sdkReady = false;
+          try { cfg = await api("/api/checkout/config"); } catch (e) { $("buyer").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+          product = "watch"; persona = "borderline";
+          $("products").innerHTML = cfg.products.map((p) => `<button type="button" data-id="${p.id}" aria-pressed="${p.id === product}"><span>${esc(p.name)}</span><span>${money(p.price)}</span></button>`).join("");
+          $("personas").innerHTML = cfg.personas.map((p) => `<button type="button" data-id="${p.id}" aria-pressed="${p.id === persona}"><span>${esc(p.label)}</span><span></span></button>`).join("");
+          const pick = (box, cb) => box.addEventListener("click", (e) => {
+            const b = e.target.closest("button"); if (!b) return;
+            box.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+            cb(b.dataset.id);
+          });
+          pick($("products"), (id) => { product = id; refresh(); });
+          pick($("personas"), (id) => { persona = id; refresh(); });
+
+          function canPay() { return quote && (quote.buyer_sees.action !== "BLOCK" || offer !== null); }
+          function updateButtons() { $("paypal-buttons").style.display = canPay() && sdkReady ? "" : "none"; }
+
+          async function refresh() {
+            offer = null; status.hidden = true;
+            $("buyer").innerHTML = '<p class="empty">Scoring…</p>';
+            try { quote = await api("/api/checkout/quote", { method: "POST", body: JSON.stringify({ product, persona }) }); }
+            catch (e) { $("buyer").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+            const b = quote.buyer_sees, m = quote.merchant_sees;
+            const headline = { ALLOW: "Ready to pay.", STEP_UP: "One quick check first.", HOLD: "We'll review this order.", BLOCK: "We can't approve this as it is." }[b.action];
+            $("buyer").innerHTML = `<div class="label">${money(quote.amount)} · checkout</div><div class="msg">${headline}</div><p class="muted" style="margin:6px 0 0">${esc(b.guidance)}</p>
+              ${b.offers.length && b.action !== "ALLOW" ? `<div class="offers">${b.offers.map((o) => `<button type="button" data-i="${o.index}" aria-pressed="false"><span class="mint mono">yes, if</span> ${esc(o.label.replace(/^yes, if /, ""))}</button>`).join("")}</div>` : ""}
+              ${b.action === "BLOCK" && !b.offers.length ? '<p class="muted" style="margin-top:10px">No option is available for this buyer: PayPal is never opened.</p>' : ""}`;
+            $("buyer").querySelector(".offers")?.addEventListener("click", (e) => {
+              const btn = e.target.closest("button"); if (!btn) return;
+              const same = offer === Number(btn.dataset.i);
+              offer = same ? null : Number(btn.dataset.i);
+              $("buyer").querySelectorAll(".offers button").forEach((x) => x.setAttribute("aria-pressed", String(!same && x === btn)));
+              updateButtons();
+            });
+            $("merchant").innerHTML = `<div class="result-top"><div class="big-risk num">${pctRisk(m.risk)}</div>${pill(m.action)}</div>
+              ${meter(m.risk, m.thresholds.tau_allow, colorFor(m.action))}
+              <div class="reasons" style="margin-top:14px">${m.top_reasons.map((r) => `<div class="muted" style="font-size:.86rem">${r.direction === "raises" ? "▲" : "▼"} ${esc(r.reason)}</div>`).join("")}</div>
+              <h2 class="t" style="margin-top:16px">Plan on approval</h2>${planList(m.paypal_plan)}`;
+            updateButtons();
+          }
+
+          async function step(path, body) {
+            const r = await api(path, { method: "POST", body: JSON.stringify(body || {}) });
+            renderOrder(r);
+          }
+          function renderOrder(o) {
+            const captured = o.captures.reduce((sum, c) => sum + (c.amount || 0), 0);
+            const id = encodeURIComponent(o.order_id);
+            if (o.status === "COMPLETED") setStatus(`Sandbox payment complete: ${money(captured)} captured in ${o.captures.length} capture${o.captures.length > 1 ? "s" : ""}. No real money moved.`, "ok");
+            else if (o.status === "VOIDED") setStatus("Reviewer rejected it: the authorization was voided and nothing was charged.", "warn");
+            else if (o.status === "VERIFY_REQUIRED") {
+              setStatus(`${captured ? money(captured) + " captured. " : ""}Enter the one-time code to continue. <span class="mono">(Sandbox: your code is ${esc(o.demo_code)})</span><div class="verify"><input class="input" id="otp" inputmode="numeric" maxlength="6" placeholder="000000" aria-label="One-time code"><button class="btn btn-sm" id="otp-go">Verify</button></div>`, "warn");
+              $("otp-go").onclick = () => step(`/api/checkout/orders/${id}/continue`, { code: $("otp").value.trim() }).catch((e) => setStatus(esc(e.message), "err"));
+            } else if (o.status === "IN_REVIEW") {
+              setStatus(`Authorized and on hold for review; nothing captured yet.<div class="verify"><button class="btn btn-sm" id="rv-ok">Approve as reviewer</button><button class="btn btn-ghost btn-sm" id="rv-no">Reject</button></div>`, "warn");
+              $("rv-ok").onclick = () => step(`/api/checkout/orders/${id}/continue`, { review: "approve" }).catch((e) => setStatus(esc(e.message), "err"));
+              $("rv-no").onclick = () => step(`/api/checkout/orders/${id}/continue`, { review: "reject" }).catch((e) => setStatus(esc(e.message), "err"));
+            } else if (o.status === "SCHEDULED") {
+              setStatus(`Authorized; capture is scheduled for later.<div class="verify"><button class="btn btn-sm" id="skip">Skip the wait (sandbox)</button></div>`, "warn");
+              $("skip").onclick = () => step(`/api/checkout/orders/${id}/continue`, {}).catch((e) => setStatus(esc(e.message), "err"));
+            } else setStatus(`Status: ${esc(o.status)}`);
+          }
+
+          await refresh();
+          if (!cfg.client_id) { setStatus("PayPal sandbox credentials are not configured on this deployment.", "err"); return; }
+          const sdk = document.createElement("script");
+          sdk.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.client_id)}&currency=USD&intent=authorize&components=buttons`;
+          sdk.onload = () => {
+            sdkReady = true; updateButtons();
+            window.paypal.Buttons({
+              style: { layout: "vertical", shape: "pill", label: "pay" },
+              onClick: (data, actions) => (canPay() ? actions.resolve() : actions.reject()),
+              createOrder: async () => {
+                setStatus("Creating a sandbox order…");
+                const o = await api("/api/checkout/orders", { method: "POST", body: JSON.stringify({ product, persona, offer }) });
+                return o.id;
+              },
+              onApprove: async (data) => {
+                setStatus("Approved in PayPal. Authorizing and running the engine's plan…");
+                try { await step(`/api/checkout/orders/${encodeURIComponent(data.orderID)}/authorize`); }
+                catch (e) { setStatus(esc(e.message), "err"); }
+              },
+              onCancel: () => setStatus("Checkout cancelled. Nothing was authorized.", "warn"),
+              onError: (err) => { console.error(err); setStatus("PayPal sandbox checkout failed. Nothing was captured; please retry.", "err"); },
+            }).render("#paypal-buttons");
+          };
+          sdk.onerror = () => setStatus("Could not load PayPal's sandbox checkout.", "err");
+          document.head.appendChild(sdk);
+        };
+
+        // ---------- results-driven tabs ----------
+        const colors = { "B1 single threshold": "#5b6b7e", "B2 static ladder": "#8a99ab", "B3 analytic (stale)": "#f5b85c",
+          "Oracle (knows the drift)": "#a99bff", "LinUCB bandit (plan)": "#5fb3ff", "Learned friction (ours)": "#3fdcaa" };
+        init.policy = () => {
+          const e5 = RESULTS.E5_policy, P = e5.policies;
+          lineChart($("p-chart"), Object.entries(P).map(([name, p]) => ({ name, values: p.curve, color: colors[name], width: name.includes("ours") ? 3 : 1.6, dash: name.startsWith("Oracle") ? "5 4" : "" })),
+            { marker: { at: e5.drift_index / e5.stream_length, label: "step-up catch 85% → 40%" }, xLabel: `${e5.stream_length.toLocaleString()} payments, in time order →`, height: 320 });
+          const rows = Object.entries(P).sort((a, b) => a[1].after_drift - b[1].after_drift);
+          $("p-table").innerHTML = `<thead><tr><th>Policy</th><th class="n">Total cost</th><th class="n">After drift</th><th class="n">Fraud loss</th><th class="n">Friction</th><th class="n">Lost customers</th><th class="n">Step-up / hold / block</th></tr></thead><tbody>` +
+            rows.map(([name, p]) => `<tr class="${name.includes("ours") ? "ours" : ""}"><td>${esc(name)}</td><td class="n">${money(p.total)}</td><td class="n">${money(p.after_drift)}</td><td class="n">${money(p.breakdown.fraud_loss)}</td><td class="n">${money(p.breakdown.friction)}</td><td class="n">${money(p.breakdown.legit_loss)}</td><td class="n">${p.actions.STEP_UP} / ${p.actions.HOLD} / ${p.actions.BLOCK}</td></tr>`).join("") + "</tbody>";
+          const rates = e5.learned_rates_end;
+          $("p-note").innerHTML = `Simulated costs in dollars (friction priced in config.yaml). The oracle is told when the drift happens and picks the lowest <em>expected</em> cost per payment; it is a reference, and random outcomes can still let a learning policy finish slightly lower. Over the whole stream the stale analytic policy is cheaper, partly because it may add friction below the approval line, which the learned policies (like the live engine) never do; their advantage is after the drift. At the end of the stream the learned policy estimates step-up catches <b class="mono">${pct(rates.STEP_UP.catch, 0)}</b> of fraud and hold <b class="mono">${pct(rates.HOLD.catch, 0)}</b>.`;
+        };
+
+        init.adversary = () => {
+          const rounds = RESULTS.E6_adversary.rounds;
+          barChart($("a-rounds"), rounds.map((x) => ({ label: "Round " + x.round, value: +(x.evasion * 100).toFixed(1), color: x.round ? "#3fdcaa" : "#ff7a6b" })),
+            { yFormat: (v) => Math.round(v) + "%", max: 40, line: { values: rounds.map((x) => x.pr_auc), color: "#a99bff", min: 0.5, max: 1, format: (v) => v.toFixed(2) } });
+          const e7 = RESULTS.E7_defense;
+          lineChart($("a-budget"), [
+            { name: "Open scores (hill-climbing)", values: e7.open_scores.map((v) => v * 100), color: "#ff7a6b" },
+            { name: "Coarse output (allow / not)", values: e7.coarse_output.map((v) => v * 100), color: "#f5b85c" },
+            { name: `Coarse + ${e7.rate_limit} queries max`, values: e7.rate_limited.map((v) => v * 100), color: "#3fdcaa" },
+          ], { xLabel: "queries per attempt: " + e7.budgets.join(" · "), yFormat: (v) => Math.round(v * 10) / 10 + "%", height: 260 });
+        };
+
+        init.network = () => {
+          const ring = RESULTS.ring_example, W = 640, H = 420, cx = W / 2, cy = H / 2;
+          const cards = [...new Map(ring.edges.map((e) => [e.card, e])).values()];
+          const NS = "http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(NS, "svg");
+          svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "chart"); svg.setAttribute("role", "img");
+          svg.setAttribute("aria-label", `${cards.length} cards connected to one device`);
+          let html = "";
+          cards.forEach((c, i) => {
+            const a = (i / cards.length) * Math.PI * 2 - Math.PI / 2, r = 165;
+            const x = cx + Math.cos(a) * r * 1.35, y = cy + Math.sin(a) * r;
+            const col = c.fraud ? "#ff7a6b" : "#3fdcaa";
+            const total = ring.edges.filter((e) => e.card === c.card).reduce((s, e) => s + e.amount, 0);
+            html += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${col}" stroke-opacity=".45" stroke-width="1.5"/>`;
+            html += `<circle cx="${x}" cy="${y}" r="15" fill="#111a2a" stroke="${col}" stroke-width="2"/>`;
+            html += `<text x="${x}" y="${y + 30}" text-anchor="middle">${esc(c.card)}</text><text x="${x}" y="${y + 42}" text-anchor="middle" style="fill:#5b6b7e">${money(total)}</text>`;
+          });
+          html += `<circle cx="${cx}" cy="${cy}" r="34" fill="rgba(255,122,107,.12)" stroke="#ff7a6b" stroke-width="2"/><text x="${cx}" y="${cy - 2}" text-anchor="middle" style="fill:#eef2f6;font-size:10px">device</text><text x="${cx}" y="${cy + 12}" text-anchor="middle" style="fill:#eef2f6;font-size:10px">${esc(ring.device.replace(/^device /, ""))}</text>`;
+          svg.innerHTML = html;
+          $("n-graph").replaceChildren(svg);
+          const fraud = ring.edges.filter((e) => e.fraud).length;
+          $("n-note").textContent = `${cards.length} distinct cards and ${ring.edges.length} payments on one device up to the flagged payment; ${fraud} were fraud. A single-row model sees one payment; this feature sees the ring. Emails seen: ${[...new Set(ring.edges.map((e) => e.email))].join(", ")}.`;
+        };
+
+        init.model = () => {
+          const r = RESULTS, e1 = r.E1_detector;
+          const row = (name, m) => `<tr><td>${name}</td><td class="n">${m.pr_auc.toFixed(3)}</td><td class="n">${m.roc_auc.toFixed(3)}</td><td class="n">${pct(m.recall_at_1pct_fpr, 1)}</td><td class="n">${m.ece.toFixed(4)}</td></tr>`;
+          $("m-e1").innerHTML = `<thead><tr><th>Model</th><th class="n">PR-AUC</th><th class="n">ROC-AUC</th><th class="n">Recall@1%FPR</th><th class="n">ECE</th></tr></thead><tbody>${row("LightGBM + isotonic", e1.lightgbm)}${row("Logistic regression", e1.logistic_regression)}${row("Deployed (after adversary loop)", r.deployed_metrics)}</tbody>`;
+          const rel = r.E2_calibration.reliability_isotonic;
+          lineChart($("m-rel"), [
+            { name: "Perfect calibration", values: rel.map((b) => b.predicted * 100), color: "#5b6b7e", dash: "4 4" },
+            { name: "Observed fraud rate", values: rel.map((b) => b.observed * 100), color: "#3fdcaa" },
+          ], { xLabel: "probability bins (" + rel.map((b) => Math.round(b.predicted * 100) + "%").join(" · ") + ")", yFormat: (v) => v.toFixed(0) + "%", height: 240 });
+          const g = r.E3_graph, cf = r.E4_counterfactual;
+          $("m-e34").innerHTML = `<tbody>
+            <tr><td>PR-AUC with / without graph features</td><td class="n">${g.with_graph.pr_auc.toFixed(3)} / ${g.without_graph.pr_auc.toFixed(3)}</td></tr>
+            <tr><td>Flagged payments with a valid "yes, if": all</td><td class="n">${pct(cf.all.validity, 0)}</td></tr>
+            <tr><td>… legitimate buyers</td><td class="n">${pct(cf.legit.validity, 0)}</td></tr>
+            <tr><td>… fraud</td><td class="n">${pct(cf.fraud.validity, 0)}</td></tr>
+            <tr><td>Mean change cost (proximity)</td><td class="n">${cf.all.proximity.toFixed(2)}</td></tr>
+            <tr><td>Mean features changed (sparsity)</td><td class="n">${cf.all.sparsity.toFixed(2)}</td></tr>
+            <tr><td>Within card's history (plausibility)</td><td class="n">${pct(cf.all.plausibility, 0)}</td></tr></tbody>`;
+          $("m-fair").innerHTML = `<thead><tr><th>Segment</th><th class="n">False-positive rate</th><th class="n">Legit payments</th></tr></thead><tbody>` +
+            Object.entries(r.fairness).flatMap(([seg, groups]) => Object.entries(groups).map(([k, v]) => `<tr><td>${esc(seg)} = ${esc(k)}</td><td class="n">${pct(v.false_positive_rate, 1)}</td><td class="n">${v.n.toLocaleString()}</td></tr>`)).join("") + "</tbody>";
+          $("m-note").innerHTML = `Trained ${esc(r.generated_at)} on ${esc(r.data_source)} data (seed ${r.seed}): ${Object.entries(r.data).filter(([k]) => ["train", "val", "calib", "test"].includes(k)).map(([k, v]) => `${k} ${v.rows.toLocaleString()} rows, ${pct(v.fraud_rate, 1)} fraud`).join("; ")}. Graph features add little on this data: device-level history already captures most of the ring signal, so this is reported, not hidden. No protected attributes are used as features.`;
+        };
+
+        // ---------- boot ----------
+        Promise.all([api("/api/samples"), api("/api/results")]).then(([s, r]) => {
+          SAMPLES = s; RESULTS = r; show();
+        }).catch((e) => {
+          document.querySelector(".panel").classList.add("on");
+          $("result").innerHTML = `<p class="empty">The engine could not be reached: ${esc(e.message)}</p>`;
+        });
+      })();
+    </script>
+  </body>
+</html>
