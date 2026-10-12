@@ -7,7 +7,7 @@ from .gateway import (
     execute_plan,
     partial_capture_plan,
     plan_for_action,
-    plan_for_counterfactual,
+    plan_for_change,
 )
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "execute_plan",
     "partial_capture_plan",
     "plan_for_action",
-    "plan_for_counterfactual",
+    "plan_for_change",
 ]

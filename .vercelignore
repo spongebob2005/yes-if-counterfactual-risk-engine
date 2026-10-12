@@ -1,4 +1,11 @@
 /*
-!/public-demo
+!/public
 !/api
+!/src
+!/risk_engine
+!/models
+!/reports
+!/requirements.txt
+!/.python-version
 !/vercel.json
+**/__pycache__

@@ -109,8 +109,9 @@ class PayPalClient:
 
     def access_token(self) -> str:
         now = self._clock()
-        if self._token and now < self._token_expiry - 60:
-            return self._token
+        token = self._token
+        if token is not None and now < self._token_expiry - 60:
+            return token
         payload = self._send(
             "POST",
             "/v1/oauth2/token",
@@ -215,10 +216,10 @@ class PayPalClient:
             request_id=request_id,
         )
 
-    def authorize_order(self, order_id: str) -> dict[str, Any]:
+    def authorize_order(self, order_id: str, *, request_id: str | None = None) -> dict[str, Any]:
         """Authorize an approved order. Returns authorization id and status."""
         order_id = _validate_resource_id(order_id)
-        result = self._api("POST", f"/v2/checkout/orders/{order_id}/authorize")
+        result = self._api("POST", f"/v2/checkout/orders/{order_id}/authorize", request_id=request_id)
         try:
             authorization = result["purchase_units"][0]["payments"]["authorizations"][0]
         except (KeyError, IndexError) as exc:
@@ -233,17 +234,18 @@ class PayPalClient:
         *,
         currency: str = "USD",
         final_capture: bool = True,
+        request_id: str | None = None,
     ) -> dict[str, Any]:
         """Capture all (amount=None) or part of an authorization."""
         body: dict[str, Any] = {"final_capture": final_capture}
         if amount is not None:
             body["amount"] = {"currency_code": currency, "value": _money(amount)}
         authorization_id = _validate_resource_id(authorization_id)
-        return self._api("POST", f"/v2/payments/authorizations/{authorization_id}/capture", body)
+        return self._api("POST", f"/v2/payments/authorizations/{authorization_id}/capture", body, request_id)
 
-    def void(self, authorization_id: str) -> dict[str, Any]:
+    def void(self, authorization_id: str, *, request_id: str | None = None) -> dict[str, Any]:
         authorization_id = _validate_resource_id(authorization_id)
-        return self._api("POST", f"/v2/payments/authorizations/{authorization_id}/void")
+        return self._api("POST", f"/v2/payments/authorizations/{authorization_id}/void", request_id=request_id)
 
     def get_authorization(self, authorization_id: str) -> dict[str, Any]:
         authorization_id = _validate_resource_id(authorization_id)

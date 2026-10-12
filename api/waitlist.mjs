@@ -30,7 +30,10 @@ export async function POST(request) {
 
   try {
     // Sorted set scored by signup time; NX keeps the first signup timestamp.
-    const added = await redis(["ZADD", "waitlist", "NX", Date.now(), email]);
+    const now = Date.now();
+    const added = await redis(["ZADD", "waitlist", "NX", now, email]);
+    // Premium interest is tracked in its own set so it can be counted separately.
+    if (body.plan === "premium") await redis(["ZADD", "waitlist:premium", "NX", now, email]);
     return Response.json({ ok: true, alreadyJoined: added === 0 });
   } catch (err) {
     console.error("waitlist write failed", err);

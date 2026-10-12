@@ -7,16 +7,16 @@ something outside PayPal (a verification, a delay) stop execution and are report
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 PAYPAL_KINDS = ("capture", "void")
-REDUCE_FRACTION = 0.75  # matches the "Reduce the amount by 25%" counterfactual
 
 
 @dataclass(frozen=True)
 class Step:
-    kind: str  # "capture" | "void" | "verify" | "wait"
+    kind: str  # "capture" | "void" | "verify" | "wait" | "review" | "switch_funding"
     description: str
     amount: float | None = None
     final_capture: bool = True
@@ -56,7 +56,10 @@ def plan_for_action(action: str, amount: float) -> PaymentPlan:
     if key == "HOLD":
         return PaymentPlan(
             "HOLD",
-            (Step("wait", "Leave the authorization uncaptured while the payment is reviewed."),),
+            (
+                Step("review", "Leave the authorization uncaptured while an analyst reviews the payment."),
+                Step("capture", "If the review approves it, capture in full.", amount),
+            ),
         )
     if key == "BLOCK":
         return PaymentPlan("BLOCK", (Step("void", "Void the authorization; nothing is charged."),))
@@ -79,21 +82,29 @@ def partial_capture_plan(amount: float, fraction: float, label: str = "Partial c
     )
 
 
-def plan_for_counterfactual(label: str, amount: float) -> PaymentPlan:
-    key = label.strip().lower()
-    if key == "verify with a step-up":
-        return PaymentPlan(label, plan_for_action("STEP UP", amount).steps)
-    if key == "wait 30 minutes":
-        return PaymentPlan(
-            label,
-            (
-                Step("wait", "Keep the authorization and wait 30 minutes.", minutes=30),
-                Step("capture", "Re-score, then capture in full.", amount),
-            ),
-        )
-    if key == "reduce the amount by 25%":
-        return partial_capture_plan(amount, REDUCE_FRACTION, label)
-    raise ValueError(f"Unknown counterfactual: {label!r}")
+def plan_for_change(change: Mapping[str, Any], amount: float, card6: str) -> PaymentPlan:
+    """Turn a counterfactual from the engine into the PayPal steps that would carry it out.
+
+    `change` is {"amount_mult", "delay_h", "card6"}; the order was created with intent AUTHORIZE.
+    """
+    steps: list[Step] = []
+    if change["card6"] != card6:
+        steps.append(Step("switch_funding", f"Ask the buyer to approve again, paying with {change['card6']}."))
+    delay = int(change["delay_h"])
+    if delay:
+        steps.append(Step("wait", f"Keep the authorization and capture in {delay} hour{'s' if delay != 1 else ''}.",
+                          minutes=delay * 60))
+    mult = float(change["amount_mult"])
+    if mult < 1:
+        now = round(amount * mult, 2)
+        steps += [
+            Step("capture", f"Capture {mult:.0%} now; the rest stays authorized.", now, final_capture=False),
+            Step("verify", "Verify the buyer before releasing the remainder."),
+            Step("capture", "Capture the remainder after verification.", round(amount - now, 2)),
+        ]
+    else:
+        steps.append(Step("capture", "Capture in full.", amount))
+    return PaymentPlan("yes, if", tuple(steps))
 
 
 def execute_plan(

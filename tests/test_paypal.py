@@ -6,7 +6,7 @@ from src.paypal import (
     execute_plan,
     partial_capture_plan,
     plan_for_action,
-    plan_for_counterfactual,
+    plan_for_change,
 )
 
 
@@ -168,21 +168,24 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual([s.kind for s in plan_for_action("ALLOW", 50).steps], ["capture"])
         self.assertEqual([s.kind for s in plan_for_action("STEP UP", 50).steps], ["verify", "capture"])
         self.assertEqual([s.kind for s in plan_for_action("step_up", 50).steps], ["verify", "capture"])
-        self.assertEqual([s.kind for s in plan_for_action("HOLD", 50).steps], ["wait"])
+        self.assertEqual([s.kind for s in plan_for_action("HOLD", 50).steps], ["review", "capture"])
         self.assertEqual([s.kind for s in plan_for_action("BLOCK", 50).steps], ["void"])
-        self.assertEqual(plan_for_action("HOLD", 50).paypal_calls, ())
+        self.assertEqual(len(plan_for_action("HOLD", 50).paypal_calls), 1)
         with self.assertRaises(ValueError):
             plan_for_action("MAYBE", 50)
 
     def test_counterfactual_plans(self):
-        reduce = plan_for_counterfactual("Reduce the amount by 25%", 200)
-        self.assertEqual(reduce.steps[0].amount, 150.0)
-        self.assertFalse(reduce.steps[0].final_capture)
-        wait = plan_for_counterfactual("Wait 30 minutes", 200)
-        self.assertEqual((wait.steps[0].kind, wait.steps[0].minutes), ("wait", 30))
-        self.assertEqual(plan_for_counterfactual("Verify with a step-up", 200).steps[0].kind, "verify")
-        with self.assertRaises(ValueError):
-            plan_for_counterfactual("Do something else", 200)
+        half = plan_for_change({"amount_mult": 0.5, "delay_h": 0, "card6": "debit"}, 200, "debit")
+        self.assertEqual([s.kind for s in half.steps], ["capture", "verify", "capture"])
+        self.assertEqual((half.steps[0].amount, half.steps[0].final_capture), (100.0, False))
+        self.assertEqual(half.steps[2].amount, 100.0)
+
+        later = plan_for_change({"amount_mult": 1.0, "delay_h": 8, "card6": "debit"}, 200, "debit")
+        self.assertEqual([(s.kind, s.minutes) for s in later.steps], [("wait", 480), ("capture", None)])
+
+        switch = plan_for_change({"amount_mult": 1.0, "delay_h": 0, "card6": "debit"}, 200, "credit")
+        self.assertEqual(switch.steps[0].kind, "switch_funding")
+        self.assertFalse(switch.steps[0].is_paypal_call)
 
     def test_partial_fraction_bounds(self):
         for bad in (0, 1, -0.2, 1.5):
