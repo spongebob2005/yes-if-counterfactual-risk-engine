@@ -1,15 +1,18 @@
 """Build everything the live engine needs, and every number the site reports.
 
     python -m src.experiments.run_all            # ~2-4 minutes on a laptop
+    python -m src.experiments.run_all --source ieee --out runs/ieee   # real data, leaves models/ alone
 
-Writes models/engine.json, models/detector.npz, models/samples.json and reports/results.json.
-Seeds, thresholds and simulator costs come from config.yaml.
+Writes models/engine.json, models/detector.npz, models/samples.json and reports/results.json
+(under --out when given). Seeds, thresholds and simulator costs come from config.yaml.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import time
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,10 +21,11 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from risk_engine import RAW_FIELDS, RiskEngine
+from risk_engine import RiskEngine, raw_fields
 from src.adversary.attacker import evasion_rate, hill_climb, random_search
 from src.counterfactual.search import quality
-from src.data.core import CATEGORICAL, FEATURES, GRAPH_FEATURES, feature_matrix
+from src.data.core import (CATEGORICAL, FEATURES, GRAPH_FEATURES, IEEE_COUNTS, IEEE_DELTAS, IEEE_FEATURES,
+                           IEEE_MATCHES, feature_matrix)
 from src.data.features import add_graph_feats, add_history, learn_category_levels, make_features
 from src.data.load import SPLIT_NAMES, assert_time_ordered_splits, load_ieee, time_split
 from src.data.synth import generate
@@ -33,6 +37,10 @@ from src.policy.baselines import analytic, replay, run_bandit, run_thompson, sin
 from src.policy.simulator import ACTIONS, drifting
 
 ROOT = Path(__file__).resolve().parents[2]
+# Raw IEEE-CIS columns the features are built from; the rest of the 434 are never used.
+IEEE_COLUMNS = ("TransactionDT", "TransactionAmt", "isFraud", "ProductCD", "card1", "card4", "card6",
+                "addr1", "dist1", "P_emaildomain", "DeviceType", "DeviceInfo",
+                *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_MATCHES)
 
 
 def log(msg: str) -> None:
@@ -41,14 +49,14 @@ def log(msg: str) -> None:
 
 def load_frame(cfg: dict) -> pd.DataFrame:
     if cfg["data"]["source"] == "ieee":
-        return load_ieee(ROOT / "data/raw")
+        return load_ieee(ROOT / "data/raw", IEEE_COLUMNS)
     d = cfg["data"]
     return generate(cards=d["cards"], days=d["days"], tx_per_card_per_day=d["tx_per_card_per_day"],
                     fraud_rate=d["fraud_rate"], seed=cfg["seed"])
 
 
-def to_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    rows = frame[list(RAW_FIELDS)].to_dict("records")
+def to_rows(frame: pd.DataFrame, fields: Sequence[str]) -> list[dict[str, Any]]:
+    rows = frame[list(fields)].to_dict("records")
     for row in rows:
         for key, value in row.items():
             if isinstance(value, float) and np.isnan(value):
@@ -64,7 +72,14 @@ def downsample(values: np.ndarray, points: int = 200) -> list[float]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--source", choices=("synthetic", "ieee"), help="override data.source in config.yaml")
+    parser.add_argument("--out", type=Path, default=ROOT, help="folder for models/ and reports/ (default: repo root)")
+    args = parser.parse_args()
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text())
+    if args.source:
+        cfg["data"]["source"] = args.source
+    out = args.out if args.out.is_absolute() else ROOT / args.out
     seed = cfg["seed"]
     rng = np.random.default_rng(seed)
     pol = cfg["policy"]
@@ -82,8 +97,13 @@ def main() -> None:
     full = make_features(add_graph_feats(add_history(frame, fallback_amount=fallback)))  # once, on the full frame
     splits = time_split(full, fractions)
     assert_time_ordered_splits(splits)
-    levels = learn_category_levels(splits["train"], CATEGORICAL)
-    X = {k: feature_matrix(v, levels, FEATURES) for k, v in splits.items()}
+    # Real data adds the IEEE-CIS C/D/M columns; the synthetic generator has none of them.
+    ieee = cfg["data"]["source"] == "ieee"
+    features = IEEE_FEATURES if ieee else FEATURES
+    categorical = (*CATEGORICAL, *IEEE_MATCHES) if ieee else CATEGORICAL
+    fields = raw_fields(features)
+    levels = learn_category_levels(splits["train"], categorical)
+    X = {k: feature_matrix(v, levels, features) for k, v in splits.items()}
     y = {k: v["isFraud"].to_numpy() for k, v in splits.items()}
     results["data"] = {k: {"rows": int(len(v)), "fraud_rate": round(float(v["isFraud"].mean()), 4)} for k, v in splits.items()}
     results["data"]["fraud_kinds"] = full.loc[full.isFraud == 1, "fraud_kind"].value_counts().to_dict() if "fraud_kind" in full else {}
@@ -94,7 +114,7 @@ def main() -> None:
     det = cfg["detector"]
     # card6 is encoded on sorted levels (credit=0, debit=1): -1 means debit is never riskier.
     direction = {**det.get("monotone", {}), }
-    monotone = [int(direction.get(name, 0)) for name in FEATURES]
+    monotone = [int(direction.get(name, 0)) for name in features]
     base, iso = fit_detector(X["train"], y["train"], X["val"], y["val"], X["calib"], y["calib"], det, seed,
                              monotone=monotone)
     raw_test = base.predict_proba(X["test"])[:, 1]
@@ -114,7 +134,7 @@ def main() -> None:
 
     # ---- M3 graph ablation (E3) ----------------------------------------
     log("M3: ablation without shared-entity features")
-    keep = [i for i, name in enumerate(FEATURES) if name not in GRAPH_FEATURES]
+    keep = [i for i, name in enumerate(features) if name not in GRAPH_FEATURES]
     no_graph, iso_ng = fit_detector(X["train"][:, keep], y["train"], X["val"][:, keep], y["val"],
                                     X["calib"][:, keep], y["calib"], det, seed, monotone=[monotone[i] for i in keep])
     ng = report(y["test"], iso_ng.predict(no_graph.predict_proba(X["test"][:, keep])[:, 1]))
@@ -129,14 +149,14 @@ def main() -> None:
     # ---- M6 adversary loop (E6) ----------------------------------------
     log("M6: adversarial retraining")
     adv = cfg["adversary"]
-    meta_common = {"features": list(FEATURES), "levels": levels}
+    meta_common = {"features": list(features), "levels": levels}
 
     def engine_for(model, iso_, t) -> RiskEngine:
         meta = {**meta_common, "thresholds": t, "policy": {"mode": "thresholds"}}
         return RiskEngine(export(model, iso_), meta)
 
     # Attacks are built from training-period fraud: validation stays clean for early stopping.
-    train_rows, val_rows, test_rows = to_rows(splits["train"]), to_rows(splits["val"]), to_rows(splits["test"])
+    train_rows, val_rows, test_rows = (to_rows(splits[k], fields) for k in ("train", "val", "test"))
     tau = thresholds["tau_allow"]
     eng = engine_for(base, iso, thresholds)
     risk_train = eng.score(train_rows)
@@ -253,9 +273,9 @@ def main() -> None:
         log(f"   {name:28s} total {data['total']:>10,.0f}  after drift {data['after_drift']:>10,.0f}")
 
     # ---- deployable engine ------------------------------------------------
-    numeric = [f for f in RAW_FIELDS if f not in CATEGORICAL]
+    numeric = [f for f in fields if f not in categorical]
     defaults = {f: float(splits["train"][f].median()) for f in numeric if f != "prev_dt"}
-    defaults.update({c: str(splits["train"][c].mode().iloc[0]) for c in CATEGORICAL})
+    defaults.update({c: str(splits["train"][c].mode().iloc[0]) for c in categorical})
     last = full.groupby("P_emaildomain").tail(1)
     email_stats = {str(r.P_emaildomain): {"P_emaildomain_prior_cnt": float(r.P_emaildomain_prior_cnt),
                                           "P_emaildomain_distinct_uids": float(r.P_emaildomain_distinct_uids)}
@@ -268,7 +288,7 @@ def main() -> None:
         "trained_at": results["generated_at"],
         "data_source": cfg["data"]["source"],
         "deployed_model": results["deployed_model"],
-        "features": list(FEATURES),
+        "features": list(features),
         "levels": levels,
         "thresholds": thresholds,
         "defaults": defaults,
@@ -277,8 +297,8 @@ def main() -> None:
         "policy": {"mode": "thompson", "thompson": thompson.state(), "bandit": bandit.state(), "sim": sim, "margin": margin},
         "metrics": {k: round(v, 4) for k, v in results["deployed_metrics"].items()},
     }
-    models_dir = ROOT / "models"
-    models_dir.mkdir(exist_ok=True)
+    models_dir = out / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
     risk_model.save(models_dir / "detector.npz")
     (models_dir / "engine.json").write_text(json.dumps(meta, indent=1) + "\n")
     engine = RiskEngine.load(models_dir)
@@ -325,9 +345,11 @@ def main() -> None:
     log("Samples and ring example")
     test["action"] = [engine.choose_action(r, row) for r, row in zip(risk["test"], test_rows)]
 
-    def pick(mask, by, ascending=True, simple_yes=False) -> int:
+    def pick(mask, by, ascending=True, simple_yes=False) -> int | None:
         """First row by `by`; with simple_yes, the first whose best "yes, if" changes one thing."""
         cand = test[mask].sort_values(by, ascending=ascending)
+        if cand.empty:
+            return None
         if simple_yes:
             for idx in cand.index[:60]:
                 cfs = engine.counterfactuals(test_rows[test.index.get_loc(idx)])
@@ -336,7 +358,11 @@ def main() -> None:
         return int(cand.index[0])
 
     t = thresholds
-    kinds = test.get("fraud_kind", pd.Series("", index=test.index))
+    if "fraud_kind" in test:
+        kinds = test["fraud_kind"]
+        is_kind = lambda kind: kinds == kind  # noqa: E731
+    else:  # Real data has no fraud types: any confirmed fraud stands in.
+        is_kind = lambda kind: test.isFraud == 1  # noqa: E731
     chosen = [
         ("clean", "A regular purchase on a known device",
          pick((test.isFraud == 0) & (test.prior_cnt > 20) & test.TransactionAmt.between(40, 120) & (test.card_device_prior > 10), "risk")),
@@ -347,29 +373,33 @@ def main() -> None:
          pick((test.risk >= t["tau_allow"]) & (test.risk < t["tau_allow"] * 2) & (test.isFraud == 0), "risk",
               simple_yes=True)),
         ("suspicious", "Stolen card, new device, middle of the night",
-         pick((kinds == "takeover") & (test.risk >= t["tau_allow"]), "risk", False)),
-        ("ring", "Device shared by many cards", pick((kinds == "ring") & (test.risk >= t["tau_allow"]), "DeviceInfo_distinct_uids", False)),
+         pick(is_kind("takeover") & (test.risk >= t["tau_allow"]), "risk", False)),
+        ("ring", "Device shared by many cards", pick(is_kind("ring") & (test.risk >= t["tau_allow"]), "DeviceInfo_distinct_uids", False)),
         ("testing", "Card testing: tiny charge seconds after the last",
-         pick((kinds == "testing") & (test.TransactionAmt < 6) & (test.DeviceInfo_distinct_uids <= 2), "since_last")),
+         pick(is_kind("testing") & (test.TransactionAmt < 6) & (test.DeviceInfo_distinct_uids <= 2), "since_last")),
     ]
     samples = []
     for key, title, idx in chosen:
-        row = to_rows(test.loc[[idx]])[0]
+        if idx is None:
+            log(f"   no test row fits the {key!r} sample; skipped")
+            continue
+        row = to_rows(test.loc[[idx]], fields)[0]
         samples.append({"id": f"TXN-{int(test.loc[idx, 'TransactionID'])}", "key": key, "title": title,
                         "is_fraud": bool(test.loc[idx, "isFraud"]), "transaction": row})
     (models_dir / "samples.json").write_text(json.dumps(samples, indent=1) + "\n")
 
     ring_idx = chosen[4][2]
-    device = test.loc[ring_idx, "DeviceInfo"]
-    ring = full[(full.DeviceInfo == device) & (full.TransactionDT <= test.loc[ring_idx, "TransactionDT"])]
-    results["ring_example"] = {
-        "device": "device " + str(device)[-4:],
-        "edges": [{"card": f"card {int(r.card1)}", "amount": float(r.TransactionAmt), "fraud": bool(r.isFraud),
-                   "email": str(r.P_emaildomain)} for r in ring.itertuples()],
-    }
+    if ring_idx is not None:
+        device = test.loc[ring_idx, "DeviceInfo"]
+        ring = full[(full.DeviceInfo == device) & (full.TransactionDT <= test.loc[ring_idx, "TransactionDT"])]
+        results["ring_example"] = {
+            "device": "device " + str(device)[-4:],
+            "edges": [{"card": f"card {int(r.card1)}", "amount": float(r.TransactionAmt), "fraud": bool(r.isFraud),
+                       "email": str(r.P_emaildomain)} for r in ring.itertuples()],
+        }
 
-    reports = ROOT / "reports"
-    reports.mkdir(exist_ok=True)
+    reports = out / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
     (reports / "results.json").write_text(json.dumps(results, indent=1, default=float) + "\n")
     log("Wrote models/ and reports/results.json")
 

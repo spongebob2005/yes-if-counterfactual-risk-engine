@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 
 from src.counterfactual.search import counterfactuals, describe
-from src.data.core import FEATURES, LABELS, feature_matrix, rows_to_columns
+from src.data.core import FEATURES, LABELS, ROW_FEATURES, feature_matrix, rows_to_columns
 from src.models.serving import RiskModel
 from src.policy.bandit import LinUCB, ThompsonFriction, context
 from src.policy.simulator import ACTIONS
@@ -39,11 +39,17 @@ RAW_FIELDS = (
 )
 
 
+def raw_fields(features: Sequence[str]) -> tuple[str, ...]:
+    """RAW_FIELDS plus any extra model inputs (the IEEE-CIS C/D/M columns) a request may carry."""
+    return (*RAW_FIELDS, *(f for f in features if f not in RAW_FIELDS and f not in ROW_FEATURES))
+
+
 class RiskEngine:
     def __init__(self, model: RiskModel, meta: dict[str, Any]):
         self.model = model
         self.meta = meta
         self.features = tuple(meta["features"])
+        self.fields = raw_fields(self.features)
         self.levels = meta["levels"]
         self.thresholds = meta["thresholds"]
         policy = meta["policy"]
@@ -60,7 +66,7 @@ class RiskEngine:
     # -- inputs ------------------------------------------------------------
     def complete(self, tx: Mapping[str, Any]) -> dict[str, Any]:
         """Fill missing history/graph fields: per email domain if known, else training medians."""
-        out = {key: tx.get(key) for key in RAW_FIELDS}
+        out = {key: tx.get(key) for key in self.fields}
         domain = out.get("P_emaildomain") or self.meta["defaults"]["P_emaildomain"]
         out["P_emaildomain"] = domain
         per_domain = self.meta["email_stats"].get(str(domain), self.meta["email_stats"]["__unknown__"])
@@ -139,4 +145,4 @@ def default_engine() -> RiskEngine:
     return RiskEngine.load()
 
 
-__all__ = ["RiskEngine", "default_engine", "GUIDANCE", "FEATURES", "MODELS_DIR"]
+__all__ = ["RiskEngine", "default_engine", "raw_fields", "GUIDANCE", "FEATURES", "MODELS_DIR"]

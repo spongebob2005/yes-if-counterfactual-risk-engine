@@ -8,8 +8,15 @@ SPLIT_NAMES = ("train", "val", "calib", "test")
 SPLIT_FRACTIONS = (0.60, 0.15, 0.10, 0.15)
 
 
-def load_ieee(data_dir: str | Path = "data/raw") -> pd.DataFrame:
-    """Read and time-sort the IEEE-CIS training transaction and identity files."""
+def load_ieee(
+    data_dir: str | Path = "data/raw",
+    columns: Sequence[str] | None = None,
+) -> pd.DataFrame:
+    """Read and time-sort the IEEE-CIS training transaction and identity files.
+
+    `columns` keeps only those columns (plus TransactionID): the full files have
+    434 columns and need several GB of memory.
+    """
     root = Path(data_dir)
     transaction_path = root / "train_transaction.csv"
     identity_path = root / "train_identity.csv"
@@ -20,8 +27,10 @@ def load_ieee(data_dir: str | Path = "data/raw") -> pd.DataFrame:
             "Download the competition data and extract both CSV files first."
         )
 
-    transactions = pd.read_csv(transaction_path)
-    identity = pd.read_csv(identity_path)
+    keep = None if columns is None else {"TransactionID", *columns}
+    usecols = None if keep is None else (lambda name: name in keep)
+    transactions = pd.read_csv(transaction_path, usecols=usecols)
+    identity = pd.read_csv(identity_path, usecols=usecols)
     if "TransactionID" not in transactions or "TransactionID" not in identity:
         raise ValueError("Both IEEE-CIS CSV files must contain TransactionID.")
     if "TransactionDT" not in transactions:

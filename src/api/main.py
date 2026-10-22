@@ -20,10 +20,11 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 
 from risk_engine import RiskEngine, default_engine
 from src.counterfactual.search import describe
+from src.data.core import IEEE_COUNTS, IEEE_DELTAS, IEEE_MATCHES
 from src.paypal.client import PayPalClient, PayPalError
 from src.paypal.gateway import PaymentPlan, Step, plan_for_action, plan_for_change
 
@@ -77,6 +78,16 @@ class Transaction(BaseModel):
     P_emaildomain_distinct_uids: float | None = Field(default=None, ge=0)
     addr1_prior_cnt: float | None = Field(default=None, ge=0)
     addr1_distinct_uids: float | None = Field(default=None, ge=0)
+
+
+# Optional IEEE-CIS inputs, used only by a model trained on real data; omitted ones get training defaults.
+Transaction = create_model(
+    "Transaction",
+    __base__=Transaction,
+    **{name: (float | None, Field(default=None, ge=0)) for name in IEEE_COUNTS},
+    **{name: (float | None, Field(default=None, ge=-1000, le=1000)) for name in IEEE_DELTAS},
+    **{name: (str | None, Field(default=None, max_length=8)) for name in IEEE_MATCHES},
+)
 
 
 class QuoteRequest(BaseModel):

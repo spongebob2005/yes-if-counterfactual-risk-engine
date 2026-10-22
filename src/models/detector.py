@@ -6,6 +6,7 @@ from typing import Any
 
 import lightgbm as lgb
 import numpy as np
+from sklearn.impute import SimpleImputer
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -61,8 +62,13 @@ def check_parity(model, iso, risk: RiskModel, X: np.ndarray) -> float:
 
 
 def fit_logreg(Xtr, ytr, seed: int = 42):
-    """E1 baseline: scaled logistic regression on the same features."""
-    model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, class_weight=None, random_state=seed))
+    """E1 baseline: scaled logistic regression on the same features.
+
+    Missing values (common in IEEE-CIS, absent from the synthetic data) get the train median
+    plus a was-missing indicator, since LightGBM handles them natively and this baseline cannot.
+    """
+    model = make_pipeline(SimpleImputer(strategy="median", add_indicator=True), StandardScaler(),
+                          LogisticRegression(max_iter=2000, class_weight=None, random_state=seed))
     model.fit(Xtr, ytr)
     return model
 

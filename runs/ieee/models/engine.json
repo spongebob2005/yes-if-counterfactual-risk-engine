@@ -1,0 +1,631 @@
+{
+ "version": 2,
+ "trained_at": "2026-10-22T03:49:12+00:00",
+ "data_source": "ieee",
+ "deployed_model": "base",
+ "features": [
+  "TransactionAmt",
+  "dist1",
+  "log_amt",
+  "amt_ratio",
+  "hour",
+  "dow",
+  "since_last",
+  "prior_cnt",
+  "prior_mean_amt",
+  "card_device_prior",
+  "DeviceInfo_prior_cnt",
+  "DeviceInfo_distinct_uids",
+  "P_emaildomain_prior_cnt",
+  "P_emaildomain_distinct_uids",
+  "addr1_prior_cnt",
+  "addr1_distinct_uids",
+  "ProductCD",
+  "card4",
+  "card6",
+  "DeviceType",
+  "P_emaildomain"
+ ],
+ "levels": {
+  "ProductCD": [
+   "C",
+   "H",
+   "R",
+   "S",
+   "W"
+  ],
+  "card4": [
+   "american express",
+   "discover",
+   "mastercard",
+   "visa"
+  ],
+  "card6": [
+   "charge card",
+   "credit",
+   "debit",
+   "debit or credit"
+  ],
+  "DeviceType": [
+   "desktop",
+   "mobile"
+  ],
+  "P_emaildomain": [
+   "aim.com",
+   "anonymous.com",
+   "aol.com",
+   "att.net",
+   "bellsouth.net",
+   "cableone.net",
+   "centurylink.net",
+   "cfl.rr.com",
+   "charter.net",
+   "comcast.net",
+   "cox.net",
+   "earthlink.net",
+   "embarqmail.com",
+   "frontier.com",
+   "frontiernet.net",
+   "gmail",
+   "gmail.com",
+   "gmx.de",
+   "hotmail.co.uk",
+   "hotmail.com",
+   "hotmail.de",
+   "hotmail.es",
+   "hotmail.fr",
+   "icloud.com",
+   "juno.com",
+   "live.com",
+   "live.com.mx",
+   "live.fr",
+   "mac.com",
+   "mail.com",
+   "me.com",
+   "msn.com",
+   "netzero.com",
+   "netzero.net",
+   "optonline.net",
+   "outlook.com",
+   "outlook.es",
+   "prodigy.net.mx",
+   "protonmail.com",
+   "ptd.net",
+   "q.com",
+   "roadrunner.com",
+   "rocketmail.com",
+   "sbcglobal.net",
+   "sc.rr.com",
+   "servicios-ta.com",
+   "suddenlink.net",
+   "twc.com",
+   "verizon.net",
+   "web.de",
+   "windstream.net",
+   "yahoo.co.jp",
+   "yahoo.co.uk",
+   "yahoo.com",
+   "yahoo.com.mx",
+   "yahoo.de",
+   "yahoo.es",
+   "yahoo.fr",
+   "ymail.com"
+  ]
+ },
+ "thresholds": {
+  "tau_allow": 0.018257261410788383,
+  "tau_hold": 0.5769230769230769,
+  "tau_block": 0.5769230769230769
+ },
+ "defaults": {
+  "TransactionAmt": 70.0,
+  "TransactionDT": 3864162.5,
+  "dist1": 9.0,
+  "prior_cnt": 16.0,
+  "prior_mean_amt": 101.49,
+  "card_device_prior": 0.0,
+  "DeviceInfo_prior_cnt": 0.0,
+  "DeviceInfo_distinct_uids": 0.0,
+  "P_emaildomain_prior_cnt": 17281.0,
+  "P_emaildomain_distinct_uids": 4960.0,
+  "addr1_prior_cnt": 3492.0,
+  "addr1_distinct_uids": 556.0,
+  "ProductCD": "W",
+  "card4": "visa",
+  "card6": "debit",
+  "DeviceType": "desktop",
+  "P_emaildomain": "gmail.com"
+ },
+ "email_stats": {
+  "hotmail.de": {
+   "P_emaildomain_prior_cnt": 42.0,
+   "P_emaildomain_distinct_uids": 3.0
+  },
+  "yahoo.co.jp": {
+   "P_emaildomain_prior_cnt": 31.0,
+   "P_emaildomain_distinct_uids": 2.0
+  },
+  "servicios-ta.com": {
+   "P_emaildomain_prior_cnt": 34.0,
+   "P_emaildomain_distinct_uids": 2.0
+  },
+  "gmx.de": {
+   "P_emaildomain_prior_cnt": 148.0,
+   "P_emaildomain_distinct_uids": 5.0
+  },
+  "yahoo.de": {
+   "P_emaildomain_prior_cnt": 73.0,
+   "P_emaildomain_distinct_uids": 3.0
+  },
+  "live.fr": {
+   "P_emaildomain_prior_cnt": 55.0,
+   "P_emaildomain_distinct_uids": 3.0
+  },
+  "netzero.com": {
+   "P_emaildomain_prior_cnt": 229.0,
+   "P_emaildomain_distinct_uids": 87.0
+  },
+  "protonmail.com": {
+   "P_emaildomain_prior_cnt": 75.0,
+   "P_emaildomain_distinct_uids": 48.0
+  },
+  "cableone.net": {
+   "P_emaildomain_prior_cnt": 158.0,
+   "P_emaildomain_distinct_uids": 52.0
+  },
+  "juno.com": {
+   "P_emaildomain_prior_cnt": 321.0,
+   "P_emaildomain_distinct_uids": 158.0
+  },
+  "yahoo.co.uk": {
+   "P_emaildomain_prior_cnt": 48.0,
+   "P_emaildomain_distinct_uids": 17.0
+  },
+  "ptd.net": {
+   "P_emaildomain_prior_cnt": 67.0,
+   "P_emaildomain_distinct_uids": 33.0
+  },
+  "q.com": {
+   "P_emaildomain_prior_cnt": 188.0,
+   "P_emaildomain_distinct_uids": 77.0
+  },
+  "frontier.com": {
+   "P_emaildomain_prior_cnt": 279.0,
+   "P_emaildomain_distinct_uids": 139.0
+  },
+  "hotmail.co.uk": {
+   "P_emaildomain_prior_cnt": 111.0,
+   "P_emaildomain_distinct_uids": 10.0
+  },
+  "embarqmail.com": {
+   "P_emaildomain_prior_cnt": 259.0,
+   "P_emaildomain_distinct_uids": 114.0
+  },
+  "roadrunner.com": {
+   "P_emaildomain_prior_cnt": 304.0,
+   "P_emaildomain_distinct_uids": 122.0
+  },
+  "windstream.net": {
+   "P_emaildomain_prior_cnt": 304.0,
+   "P_emaildomain_distinct_uids": 137.0
+  },
+  "cfl.rr.com": {
+   "P_emaildomain_prior_cnt": 171.0,
+   "P_emaildomain_distinct_uids": 54.0
+  },
+  "netzero.net": {
+   "P_emaildomain_prior_cnt": 195.0,
+   "P_emaildomain_distinct_uids": 86.0
+  },
+  "rocketmail.com": {
+   "P_emaildomain_prior_cnt": 663.0,
+   "P_emaildomain_distinct_uids": 328.0
+  },
+  "outlook.es": {
+   "P_emaildomain_prior_cnt": 437.0,
+   "P_emaildomain_distinct_uids": 24.0
+  },
+  "prodigy.net.mx": {
+   "P_emaildomain_prior_cnt": 206.0,
+   "P_emaildomain_distinct_uids": 18.0
+  },
+  "centurylink.net": {
+   "P_emaildomain_prior_cnt": 204.0,
+   "P_emaildomain_distinct_uids": 93.0
+  },
+  "web.de": {
+   "P_emaildomain_prior_cnt": 239.0,
+   "P_emaildomain_distinct_uids": 14.0
+  },
+  "sc.rr.com": {
+   "P_emaildomain_prior_cnt": 163.0,
+   "P_emaildomain_distinct_uids": 22.0
+  },
+  "gmail": {
+   "P_emaildomain_prior_cnt": 495.0,
+   "P_emaildomain_distinct_uids": 223.0
+  },
+  "suddenlink.net": {
+   "P_emaildomain_prior_cnt": 174.0,
+   "P_emaildomain_distinct_uids": 75.0
+  },
+  "frontiernet.net": {
+   "P_emaildomain_prior_cnt": 194.0,
+   "P_emaildomain_distinct_uids": 84.0
+  },
+  "mac.com": {
+   "P_emaildomain_prior_cnt": 435.0,
+   "P_emaildomain_distinct_uids": 304.0
+  },
+  "hotmail.fr": {
+   "P_emaildomain_prior_cnt": 294.0,
+   "P_emaildomain_distinct_uids": 10.0
+  },
+  "mail.com": {
+   "P_emaildomain_prior_cnt": 558.0,
+   "P_emaildomain_distinct_uids": 261.0
+  },
+  "hotmail.es": {
+   "P_emaildomain_prior_cnt": 304.0,
+   "P_emaildomain_distinct_uids": 18.0
+  },
+  "earthlink.net": {
+   "P_emaildomain_prior_cnt": 513.0,
+   "P_emaildomain_distinct_uids": 245.0
+  },
+  "sbcglobal.net": {
+   "P_emaildomain_prior_cnt": 2969.0,
+   "P_emaildomain_distinct_uids": 951.0
+  },
+  "yahoo.com.mx": {
+   "P_emaildomain_prior_cnt": 1542.0,
+   "P_emaildomain_distinct_uids": 88.0
+  },
+  "ymail.com": {
+   "P_emaildomain_prior_cnt": 2395.0,
+   "P_emaildomain_distinct_uids": 910.0
+  },
+  "aim.com": {
+   "P_emaildomain_prior_cnt": 314.0,
+   "P_emaildomain_distinct_uids": 126.0
+  },
+  "live.com.mx": {
+   "P_emaildomain_prior_cnt": 748.0,
+   "P_emaildomain_distinct_uids": 37.0
+  },
+  "yahoo.es": {
+   "P_emaildomain_prior_cnt": 133.0,
+   "P_emaildomain_distinct_uids": 46.0
+  },
+  "live.com": {
+   "P_emaildomain_prior_cnt": 3040.0,
+   "P_emaildomain_distinct_uids": 1109.0
+  },
+  "att.net": {
+   "P_emaildomain_prior_cnt": 4032.0,
+   "P_emaildomain_distinct_uids": 1183.0
+  },
+  "twc.com": {
+   "P_emaildomain_prior_cnt": 229.0,
+   "P_emaildomain_distinct_uids": 86.0
+  },
+  "charter.net": {
+   "P_emaildomain_prior_cnt": 815.0,
+   "P_emaildomain_distinct_uids": 361.0
+  },
+  "cox.net": {
+   "P_emaildomain_prior_cnt": 1392.0,
+   "P_emaildomain_distinct_uids": 542.0
+  },
+  "verizon.net": {
+   "P_emaildomain_prior_cnt": 2704.0,
+   "P_emaildomain_distinct_uids": 852.0
+  },
+  "msn.com": {
+   "P_emaildomain_prior_cnt": 4091.0,
+   "P_emaildomain_distinct_uids": 1524.0
+  },
+  "me.com": {
+   "P_emaildomain_prior_cnt": 1521.0,
+   "P_emaildomain_distinct_uids": 737.0
+  },
+  "outlook.com": {
+   "P_emaildomain_prior_cnt": 5095.0,
+   "P_emaildomain_distinct_uids": 1273.0
+  },
+  "icloud.com": {
+   "P_emaildomain_prior_cnt": 6266.0,
+   "P_emaildomain_distinct_uids": 1934.0
+  },
+  "bellsouth.net": {
+   "P_emaildomain_prior_cnt": 1908.0,
+   "P_emaildomain_distinct_uids": 668.0
+  },
+  "anonymous.com": {
+   "P_emaildomain_prior_cnt": 36997.0,
+   "P_emaildomain_distinct_uids": 9096.0
+  },
+  "comcast.net": {
+   "P_emaildomain_prior_cnt": 7887.0,
+   "P_emaildomain_distinct_uids": 2371.0
+  },
+  "hotmail.com": {
+   "P_emaildomain_prior_cnt": 45249.0,
+   "P_emaildomain_distinct_uids": 5917.0
+  },
+  "yahoo.fr": {
+   "P_emaildomain_prior_cnt": 142.0,
+   "P_emaildomain_distinct_uids": 17.0
+  },
+  "yahoo.com": {
+   "P_emaildomain_prior_cnt": 100933.0,
+   "P_emaildomain_distinct_uids": 13401.0
+  },
+  "optonline.net": {
+   "P_emaildomain_prior_cnt": 1010.0,
+   "P_emaildomain_distinct_uids": 245.0
+  },
+  "aol.com": {
+   "P_emaildomain_prior_cnt": 28288.0,
+   "P_emaildomain_distinct_uids": 5592.0
+  },
+  "gmail.com": {
+   "P_emaildomain_prior_cnt": 228354.0,
+   "P_emaildomain_distinct_uids": 21515.0
+  },
+  "__unknown__": {
+   "P_emaildomain_prior_cnt": 0.0,
+   "P_emaildomain_distinct_uids": 1.0
+  }
+ },
+ "counterfactual": {
+  "amt_mults": [
+   1.0,
+   0.9,
+   0.75,
+   0.5,
+   0.25,
+   0.1
+  ],
+  "delays_h": [
+   0,
+   1,
+   2,
+   4,
+   8,
+   12,
+   24
+  ],
+  "card6_opts": [
+   "debit",
+   "credit"
+  ],
+  "weights": {
+   "amt": 1.0,
+   "delay": 0.5,
+   "method": 0.3
+  },
+  "top_k": 3
+ },
+ "policy": {
+  "mode": "thompson",
+  "thompson": {
+   "kind": "thompson",
+   "catch": [
+    [
+     0.001,
+     20.001
+    ],
+    [
+     77.88363037252283,
+     122.11636962681972
+    ],
+    [
+     161.85373435450748,
+     20.2934013682559
+    ],
+    [
+     96.81132043368082,
+     0.0005732736268885889
+    ]
+   ],
+   "abandon": [
+    [
+     0.001,
+     20.001
+    ],
+    [
+     5.059365492753175,
+     194.94063450724664
+    ],
+    [
+     29.415755866113305,
+     170.58422174256094
+    ],
+    [
+     71.99127171540378,
+     0.0007111635524897147
+    ]
+   ],
+   "fric": [
+    0.0,
+    2.0,
+    6.0,
+    10.0
+   ],
+   "margin": 0.1,
+   "gamma": 0.995,
+   "actions": [
+    "ALLOW",
+    "STEP_UP",
+    "HOLD",
+    "BLOCK"
+   ]
+  },
+  "bandit": {
+   "A": [
+    [
+     [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    [
+     [
+      1000.9999999999187,
+      1479.5975434784345,
+      62.92442416753228,
+      49.3579425666906
+     ],
+     [
+      1479.5975434784345,
+      5737.066097029127,
+      214.85298895288187,
+      62.92442416753229
+     ],
+     [
+      62.92442416753228,
+      214.85298895288187,
+      14.916968243129249,
+      4.614820889467421
+     ],
+     [
+      49.3579425666906,
+      62.92442416753229,
+      4.614820889467421,
+      5.061339415151548
+     ]
+    ],
+    [
+     [
+      995.4368803000386,
+      5767.835919416952,
+      491.7785436539802,
+      135.31473180503886
+     ],
+     [
+      5767.835919416952,
+      76155.99151111321,
+      4950.517640089608,
+      491.7785436539802
+     ],
+     [
+      491.7785436539802,
+      4950.517640089608,
+      558.4875117609541,
+      87.327448707212
+     ],
+     [
+      135.31473180503886,
+      491.7785436539802,
+      87.327448707212,
+      34.32840242504244
+     ]
+    ],
+    [
+     [
+      327.45308817113005,
+      1005.0807562491729,
+      405.25748839711844,
+      137.50314516158704
+     ],
+     [
+      1005.0807562491729,
+      6115.598412073663,
+      2088.592684342469,
+      405.25748839711844
+     ],
+     [
+      405.25748839711844,
+      2088.592684342469,
+      973.8670505691371,
+      219.64107882150273
+     ],
+     [
+      137.50314516158704,
+      405.25748839711844,
+      219.64107882150273,
+      77.25815244756781
+     ]
+    ]
+   ],
+   "b": [
+    [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -68.10464937649125,
+     -199.46040982748494,
+     -10.30064652636079,
+     -4.370827087278817
+    ],
+    [
+     -172.7219641931825,
+     -1526.8643760916389,
+     -102.1105429156585,
+     -19.338810405970374
+    ],
+    [
+     -90.13869183761916,
+     -484.152542267255,
+     -154.70942222900544,
+     -33.13989994461139
+    ]
+   ],
+   "alpha": 0.3,
+   "gamma": 0.999
+  },
+  "sim": {
+   "ALLOW": {
+    "fric": 0.0,
+    "catch": 0.0,
+    "abandon": 0.0
+   },
+   "STEP_UP": {
+    "fric": 2.0,
+    "catch": 0.85,
+    "abandon": 0.03
+   },
+   "HOLD": {
+    "fric": 6.0,
+    "catch": 0.9,
+    "abandon": 0.15
+   },
+   "BLOCK": {
+    "fric": 10.0,
+    "catch": 1.0,
+    "abandon": 1.0
+   }
+  },
+  "margin": 0.1
+ },
+ "metrics": {
+  "pr_auc": 0.1402,
+  "roc_auc": 0.7747,
+  "recall_at_1pct_fpr": 0.1126,
+  "ece": 0.0045
+ }
+}

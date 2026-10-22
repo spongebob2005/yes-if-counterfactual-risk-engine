@@ -20,6 +20,12 @@ ROW_FEATURES = ("log_amt", "amt_ratio", "hour", "dow", "since_last")
 FEATURES = (
     "TransactionAmt", "dist1", *ROW_FEATURES, *HISTORY_FEATURES, *GRAPH_FEATURES, *CATEGORICAL,
 )
+# IEEE-CIS only (the synthetic data has none of these): anonymised counts (C), time deltas
+# in days (D) and match flags (M, categorical). Requests that omit them get training defaults.
+IEEE_COUNTS = tuple(f"C{i}" for i in range(1, 15))
+IEEE_DELTAS = tuple(f"D{i}" for i in range(1, 16))
+IEEE_MATCHES = tuple(f"M{i}" for i in range(1, 10))
+IEEE_FEATURES = (*FEATURES, *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_MATCHES)
 
 # Plain-language names for explanations.
 LABELS = {
@@ -44,6 +50,9 @@ LABELS = {
     "card6": "Funding source (debit/credit)",
     "DeviceType": "Device type",
     "P_emaildomain": "Email domain",
+    **{name: "Linked card and address counts" for name in IEEE_COUNTS},
+    **{name: "Account age and payment gaps" for name in IEEE_DELTAS},
+    **{name: "Name and address match checks" for name in IEEE_MATCHES},
 }
 
 
@@ -79,13 +88,13 @@ def feature_matrix(
     levels: Mapping[str, Sequence[str]],
     features: Sequence[str] = FEATURES,
 ) -> np.ndarray:
-    """Build the model input matrix in a fixed column order."""
+    """Build the model input matrix in a fixed column order. Columns with `levels` are categorical."""
     derived = row_features(cols)
     columns = []
     for name in features:
         if name in derived:
             columns.append(derived[name])
-        elif name in CATEGORICAL:
+        elif name in levels:
             columns.append(encode(list(cols[name]), levels[name]))
         else:
             columns.append(_num(cols, name))
