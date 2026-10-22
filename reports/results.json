@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-12T04:25:46+00:00",
+ "generated_at": "2026-10-22T04:16:07+00:00",
  "data_source": "synthetic",
  "seed": 42,
  "data": {
@@ -1633,6 +1633,11 @@
  },
  "ring_example": {
   "device": "device 774e",
+  "totals": {
+   "cards": 10,
+   "payments": 16,
+   "fraud": 16
+  },
   "edges": [
    {
     "card": "card 14027",

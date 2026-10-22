@@ -102,8 +102,17 @@ python -m pip install -r requirements-dev.txt
 python -m src.experiments.run_all          # data → model → experiments → models/ + reports/ (~1 minute)
 uvicorn src.api.main:app --reload          # API + website on http://127.0.0.1:8000
 streamlit run dashboard/app.py             # offline dashboard
-python -m unittest discover -s tests       # 60 tests
+python -m unittest discover -s tests       # TESTCOUNT tests (also run by GitHub Actions on every push and PR)
 ```
+
+**Real data (IEEE-CIS).** Put `train_transaction.csv` and `train_identity.csv` from the [Kaggle competition](https://www.kaggle.com/c/ieee-fraud-detection/data) in `data/raw/`, then:
+
+```bash
+python -m src.experiments.run_all --source ieee --out runs/ieee   # ~IEEEMIN minutes, leaves models/ alone
+RISK_ENGINE_DIR=runs/ieee uvicorn src.api.main:app --reload     # serve the IEEE-CIS model instead
+```
+
+Only the ~55 columns the features use are read, so it fits in a few GB of memory. The committed `runs/ieee/` holds the result.
 
 `requirements.txt` holds only what the deployed API needs (FastAPI, numpy, requests, python-dotenv); training and the dashboard use `requirements-dev.txt`.
 
@@ -122,11 +131,11 @@ curl -X POST "https://yes-if-silk.vercel.app/api/decide?view=analyst" \
 
 The console's **Sandbox checkout** tab scores a demo buyer before PayPal opens, creates an `AUTHORIZE` order for a server-side catalog price, and runs the engine's plan after approval. Depending on the decision, the plan captures, asks for a one-time code, holds for review, or offers a "yes, if" (part now, the rest later). Blocked buyers never reach PayPal.
 
-Local setup: create `.env` with `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from a PayPal developer **sandbox** app. Never commit it. Orders are stored in SQLite locally (`.data/`) and in Upstash Redis on Vercel. `scripts/paypal_smoke_test.py` exercises authorize → capture / partial capture / void from the terminal.
+Local setup: `cp .env.example .env` and fill in `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from a PayPal developer **sandbox** app. Never commit `.env`. Orders are stored in SQLite locally (`.data/`) and in Upstash Redis on Vercel. `scripts/paypal_smoke_test.py` exercises authorize → capture / partial capture / void from the terminal.
 
 ## Deploy
 
-Vercel serves `public/` as static files and `api/index.py` (FastAPI) as a Python function; `api/waitlist.mjs` stays a Node function. `vercel.json` rewrites every `/api/*` path except the waitlist to the Python app. Required environment variables: `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` (sandbox), plus `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Upstash integration.
+Vercel serves `public/` as static files and `api/index.py` (FastAPI) as a Python function; `api/waitlist.mjs` stays a Node function. `vercel.json` rewrites every `/api/*` path except the waitlist to the Python app. Required environment variables: `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` (sandbox), plus `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Upstash integration. Optional: `RISK_ENGINE_DIR=runs/ieee` serves the IEEE-CIS model, results and samples instead of the synthetic ones (default).
 
 ## Important: demo only
 

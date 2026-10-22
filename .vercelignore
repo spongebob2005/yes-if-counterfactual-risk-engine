@@ -5,6 +5,7 @@
 !/risk_engine
 !/models
 !/reports
+!/runs
 !/requirements.txt
 !/.python-version
 !/vercel.json

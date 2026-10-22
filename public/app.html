@@ -567,8 +567,9 @@
           html += `<circle cx="${cx}" cy="${cy}" r="34" fill="rgba(255,122,107,.12)" stroke="#ff7a6b" stroke-width="2"/><text x="${cx}" y="${cy - 2}" text-anchor="middle" style="fill:#eef2f6;font-size:10px">device</text><text x="${cx}" y="${cy + 12}" text-anchor="middle" style="fill:#eef2f6;font-size:10px">${esc(ring.device.replace(/^device /, ""))}</text>`;
           svg.innerHTML = html;
           $("n-graph").replaceChildren(svg);
-          const fraud = ring.edges.filter((e) => e.fraud).length;
-          $("n-note").textContent = `${cards.length} distinct cards and ${ring.edges.length} payments on one device up to the flagged payment; ${fraud} were fraud. A single-row model sees one payment; this feature sees the ring. Emails seen: ${[...new Set(ring.edges.map((e) => e.email))].join(", ")}.`;
+          const totals = ring.totals || { cards: cards.length, payments: ring.edges.length, fraud: ring.edges.filter((e) => e.fraud).length };
+          const shown = totals.payments > ring.edges.length ? ` (the latest ${ring.edges.length} are drawn)` : "";
+          $("n-note").textContent = `${totals.cards} distinct cards and ${totals.payments} payments on one device up to the flagged payment${shown}; ${totals.fraud} were fraud. A single-row model sees one payment; this feature sees the ring. Emails seen: ${[...new Set(ring.edges.map((e) => e.email))].join(", ")}.`;
         };
 
         init.model = () => {
@@ -591,7 +592,7 @@
             <tr><td>Within card's history (plausibility)</td><td class="n">${pct(cf.all.plausibility, 0)}</td></tr></tbody>`;
           $("m-fair").innerHTML = `<thead><tr><th>Segment</th><th class="n">False-positive rate</th><th class="n">Legit payments</th></tr></thead><tbody>` +
             Object.entries(r.fairness).flatMap(([seg, groups]) => Object.entries(groups).map(([k, v]) => `<tr><td>${esc(seg)} = ${esc(k)}</td><td class="n">${pct(v.false_positive_rate, 1)}</td><td class="n">${v.n.toLocaleString()}</td></tr>`)).join("") + "</tbody>";
-          $("m-note").innerHTML = `Trained ${esc(r.generated_at)} on ${esc(r.data_source)} data (seed ${r.seed}): ${Object.entries(r.data).filter(([k]) => ["train", "val", "calib", "test"].includes(k)).map(([k, v]) => `${k} ${v.rows.toLocaleString()} rows, ${pct(v.fraud_rate, 1)} fraud`).join("; ")}. Graph features add little on this data: device-level history already captures most of the ring signal, so this is reported, not hidden. No protected attributes are used as features.`;
+          $("m-note").innerHTML = `Trained ${esc(r.generated_at)} on ${esc(r.data_source)} data (seed ${r.seed}): ${Object.entries(r.data).filter(([k]) => ["train", "val", "calib", "test"].includes(k)).map(([k, v]) => `${k} ${v.rows.toLocaleString()} rows, ${pct(v.fraud_rate, 1)} fraud`).join("; ")}. ${g.pr_auc_delta >= 0.01 ? `Graph features add ${g.pr_auc_delta.toFixed(3)} PR-AUC on this data.` : "Graph features add little on this data: device-level history already captures most of the ring signal, so this is reported, not hidden."} No protected attributes are used as features.`;
         };
 
         // ---------- boot ----------

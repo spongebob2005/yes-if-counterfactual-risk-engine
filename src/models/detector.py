@@ -73,16 +73,25 @@ def fit_logreg(Xtr, ytr, seed: int = 42):
     return model
 
 
-def choose_thresholds(risk: np.ndarray, y: np.ndarray, amount: np.ndarray, sim: dict, margin: float) -> dict[str, float]:
+def choose_thresholds(risk: np.ndarray, y: np.ndarray, amount: np.ndarray, sim: dict, margin: float,
+                      max_friction_rate: float = 0.5) -> dict[str, float]:
     """Pick the allow / step-up / hold / block ladder that minimises expected cost on validation.
 
     Each row's cost under each action uses its true label (r = y), so this is the cost the
-    static ladder would actually have paid on the validation stream.
+    static ladder would actually have paid on the validation stream. `max_friction_rate` caps
+    the share of payments that may get any friction: a weak model plus cheap simulated step-up
+    would otherwise verify most good customers.
     """
     order = np.argsort(risk)
     r, cost = risk[order], expected_cost_matrix(y[order].astype(float), amount[order], sim, margin)
     cum = np.vstack([np.zeros(len(ACTIONS)), np.cumsum(cost, axis=0)])
     grid = np.unique(np.quantile(r, np.linspace(0.5, 0.999, 60)))
+    # Rows at or above tau_allow get friction; isotonic scores tie a lot, so count rows, not quantiles.
+    grid = grid[len(r) - np.searchsorted(r, grid) <= max_friction_rate * len(r)]
+    if not len(grid):
+        values = np.unique(r)
+        fits = values[len(r) - np.searchsorted(r, values) <= max_friction_rate * len(r)]
+        grid = fits[:1] if len(fits) else np.array([np.nextafter(r[-1], np.inf)])
     pos = np.searchsorted(r, grid)
     best = (np.inf, None)
     for i, a in enumerate(pos):

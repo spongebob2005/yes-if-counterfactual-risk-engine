@@ -1,13 +1,14 @@
 """yes, if: the decision layer on top of a calibrated fraud detector.
 
-`RiskEngine` loads the artifacts written by `python -m src.experiments.run_all` (models/)
-and answers one question per payment: allow, step up, hold or block, and if not allow,
+`RiskEngine` loads the artifacts written by `python -m src.experiments.run_all` (models/, or
+the run named by RISK_ENGINE_DIR, e.g. runs/ieee) and answers one question per payment: allow, step up, hold or block, and if not allow,
 what is the cheapest change that would make the model say yes. Numpy only at runtime.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
@@ -21,7 +22,11 @@ from src.models.serving import RiskModel
 from src.policy.bandit import LinUCB, ThompsonFriction, context
 from src.policy.simulator import ACTIONS
 
-MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# Which run to serve: the repo root (synthetic, the default) or e.g. runs/ieee. Relative paths are from the repo.
+ARTIFACTS_DIR = REPO_ROOT / os.getenv("RISK_ENGINE_DIR", ".")
+MODELS_DIR = ARTIFACTS_DIR / "models"
+REPORTS_DIR = ARTIFACTS_DIR / "reports"
 
 GUIDANCE = {
     "ALLOW": "Approved.",
@@ -145,4 +150,4 @@ def default_engine() -> RiskEngine:
     return RiskEngine.load()
 
 
-__all__ = ["RiskEngine", "default_engine", "raw_fields", "GUIDANCE", "FEATURES", "MODELS_DIR"]
+__all__ = ["RiskEngine", "default_engine", "raw_fields", "GUIDANCE", "FEATURES", "MODELS_DIR", "REPORTS_DIR"]

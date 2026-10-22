@@ -3,9 +3,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from .core import IEEE_CARD, IEEE_CATEGORICAL, IEEE_COUNTS, IEEE_DELTAS
 
 SPLIT_NAMES = ("train", "val", "calib", "test")
 SPLIT_FRACTIONS = (0.60, 0.15, 0.10, 0.15)
+# Raw IEEE-CIS columns the features are built from; the rest of the 434 are never used.
+IEEE_COLUMNS = ("TransactionDT", "TransactionAmt", "isFraud", "ProductCD", "card1", "card4", "card6",
+                "addr1", "dist1", "P_emaildomain", "DeviceType", "DeviceInfo",
+                *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_CARD, *IEEE_CATEGORICAL)
 
 
 def load_ieee(

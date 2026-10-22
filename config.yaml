@@ -34,6 +34,7 @@ counterfactual:
 
 policy:
   margin: 0.10                # value of a legit transaction (margin + repeat business), share of amount
+  max_friction_rate: 0.10     # at most this share of validation payments may get step-up, hold or block
   linucb_alpha: 1.0
   drift_at: 0.5               # fraction of the stream where STEP_UP stops working as well
   step_up_catch_after: 0.40

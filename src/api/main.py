@@ -22,9 +22,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, create_model
 
-from risk_engine import RiskEngine, default_engine
+from risk_engine import MODELS_DIR, REPORTS_DIR, RiskEngine, default_engine
 from src.counterfactual.search import describe
-from src.data.core import IEEE_COUNTS, IEEE_DELTAS, IEEE_MATCHES
+from src.data.core import IEEE_CARD, IEEE_COUNTS, IEEE_DELTAS, IEEE_MATCHES
 from src.paypal.client import PayPalClient, PayPalError
 from src.paypal.gateway import PaymentPlan, Step, plan_for_action, plan_for_change
 
@@ -39,8 +39,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / "reports" / "results.json"
-SAMPLES = ROOT / "models" / "samples.json"
+RESULTS = REPORTS_DIR / "results.json"
+SAMPLES = MODELS_DIR / "samples.json"
 ORDER_TTL = 7 * 86400
 
 PRODUCTS = {
@@ -87,6 +87,8 @@ Transaction = create_model(
     **{name: (float | None, Field(default=None, ge=0)) for name in IEEE_COUNTS},
     **{name: (float | None, Field(default=None, ge=-1000, le=1000)) for name in IEEE_DELTAS},
     **{name: (str | None, Field(default=None, max_length=8)) for name in IEEE_MATCHES},
+    **{name: (float | None, Field(default=None, ge=0, le=20_000)) for name in IEEE_CARD},
+    R_emaildomain=(str | None, Field(default=None, max_length=64)),
 )
 
 

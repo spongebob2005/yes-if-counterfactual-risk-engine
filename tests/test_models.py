@@ -65,6 +65,20 @@ class DetectorTests(unittest.TestCase):
         self.assertLessEqual(t["tau_allow"], t["tau_hold"])
         self.assertLessEqual(t["tau_hold"], t["tau_block"])
 
+    def test_friction_cap_bounds_the_share_of_payments_not_allowed(self):
+        p = self.risk.predict(self.X[2400:])
+        for cap in (0.02, 0.05, 0.2):
+            t = choose_thresholds(p, self.y[2400:], np.full(len(p), 100.0), SIM, 0.1, max_friction_rate=cap)
+            self.assertLessEqual((p >= t["tau_allow"]).mean(), cap, cap)
+
+    def test_friction_cap_holds_when_scores_tie(self):
+        p = np.repeat([0.01, 0.2, 0.6], [900, 80, 20])  # isotonic output is piecewise constant
+        y = (p > 0.5).astype(int)
+        t = choose_thresholds(p, y, np.full(len(p), 100.0), SIM, 0.1, max_friction_rate=0.05)
+        self.assertLessEqual((p >= t["tau_allow"]).mean(), 0.05)
+        t = choose_thresholds(np.full(100, 0.3), np.zeros(100), np.full(100, 100.0), SIM, 0.1, max_friction_rate=0.05)
+        self.assertGreater(t["tau_allow"], 0.3)  # everything ties: allow all rather than verify all
+
 
 class MetricTests(unittest.TestCase):
     def test_perfectly_calibrated_scores_have_low_ece(self):

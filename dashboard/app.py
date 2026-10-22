@@ -14,7 +14,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from risk_engine import RiskEngine  # noqa: E402
+from risk_engine import MODELS_DIR, REPORTS_DIR, RiskEngine  # noqa: E402
 from src.paypal import plan_for_action, plan_for_change  # noqa: E402
 
 LOGO = ROOT / "files" / "yes-if_1-primary.png"
@@ -28,12 +28,12 @@ def engine() -> RiskEngine:
 
 @st.cache_data
 def results() -> dict:
-    return json.loads((ROOT / "reports" / "results.json").read_text())
+    return json.loads((REPORTS_DIR / "results.json").read_text())
 
 
 @st.cache_data
 def samples() -> list[dict]:
-    return json.loads((ROOT / "models" / "samples.json").read_text())
+    return json.loads((MODELS_DIR / "samples.json").read_text())
 
 
 def pick_sample(key: str) -> dict:
@@ -138,6 +138,8 @@ elif page == "Adversary arena":
 else:
     st.title("One device, many cards.")
     ring = results()["ring_example"]
-    st.markdown(f"**{ring['device']}**: {len({e['card'] for e in ring['edges']})} distinct cards, "
-                f"{len(ring['edges'])} payments, {sum(e['fraud'] for e in ring['edges'])} fraud.")
+    totals = ring.get("totals") or {"cards": len({e["card"] for e in ring["edges"]}), "payments": len(ring["edges"]),
+                                    "fraud": sum(e["fraud"] for e in ring["edges"])}
+    st.markdown(f"**{ring['device']}**: {totals['cards']} distinct cards, {totals['payments']} payments, "
+                f"{totals['fraud']} fraud." + (f" Latest {len(ring['edges'])} shown." if totals["payments"] > len(ring["edges"]) else ""))
     st.dataframe(ring["edges"], hide_index=True)

@@ -1,7 +1,10 @@
 import unittest
 
+import numpy as np
 import pandas as pd
 
+from risk_engine import RAW_FIELDS, raw_fields
+from src.data.core import IEEE_CATEGORICAL, IEEE_FEATURES, feature_matrix
 from src.data.features import (
     add_history,
     apply_category_levels,
@@ -82,6 +85,21 @@ class DataPipelineTests(unittest.TestCase):
 
         self.assertEqual(levels["ProductCD"], ["C", "W"])
         self.assertTrue(pd.isna(transformed.iloc[0]["ProductCD"]))
+
+    def test_columns_with_levels_are_encoded_as_categories(self):
+        cols = {"TransactionDT": [0, 3600], "TransactionAmt": [10.0, 20.0], "prior_mean_amt": [10.0, 10.0],
+                "prev_dt": [np.nan, 0.0], "M4": ["M2", None], "C1": [1.0, 3.0]}
+        X = feature_matrix(cols, {"M4": ["M0", "M1", "M2"]}, ("M4", "C1", "since_last"))
+        np.testing.assert_array_equal(X, [[2.0, 1.0, -1.0], [-1.0, 3.0, 3600.0]])
+
+    def test_ieee_inputs_extend_the_raw_fields(self):
+        fields = raw_fields(IEEE_FEATURES)
+        self.assertEqual(fields[:len(RAW_FIELDS)], RAW_FIELDS)
+        self.assertIn("C1", fields)
+        self.assertIn("R_emaildomain", fields)
+        self.assertNotIn("log_amt", fields)  # derived per row, never sent
+        self.assertEqual(len(fields), len(set(fields)))
+        self.assertTrue(set(IEEE_CATEGORICAL) <= set(fields))
 
 
 if __name__ == "__main__":

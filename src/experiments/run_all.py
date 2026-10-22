@@ -24,10 +24,9 @@ import yaml
 from risk_engine import RiskEngine, raw_fields
 from src.adversary.attacker import evasion_rate, hill_climb, random_search
 from src.counterfactual.search import quality
-from src.data.core import (CATEGORICAL, FEATURES, GRAPH_FEATURES, IEEE_COUNTS, IEEE_DELTAS, IEEE_FEATURES,
-                           IEEE_MATCHES, feature_matrix)
+from src.data.core import CATEGORICAL, FEATURES, GRAPH_FEATURES, IEEE_CATEGORICAL, IEEE_FEATURES, feature_matrix
 from src.data.features import add_graph_feats, add_history, learn_category_levels, make_features
-from src.data.load import SPLIT_NAMES, assert_time_ordered_splits, load_ieee, time_split
+from src.data.load import IEEE_COLUMNS, SPLIT_NAMES, assert_time_ordered_splits, load_ieee, time_split
 from src.data.synth import generate
 from src.models.detector import check_parity, choose_thresholds, export, fit_detector, fit_logreg
 from src.models.metrics import ece, reliability, report
@@ -37,10 +36,8 @@ from src.policy.baselines import analytic, replay, run_bandit, run_thompson, sin
 from src.policy.simulator import ACTIONS, drifting
 
 ROOT = Path(__file__).resolve().parents[2]
-# Raw IEEE-CIS columns the features are built from; the rest of the 434 are never used.
-IEEE_COLUMNS = ("TransactionDT", "TransactionAmt", "isFraud", "ProductCD", "card1", "card4", "card6",
-                "addr1", "dist1", "P_emaildomain", "DeviceType", "DeviceInfo",
-                *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_MATCHES)
+RING_MAX_CARDS = 50   # the ring sample must be a device, not a platform
+RING_MAX_EDGES = 60   # payments kept in reports/results.json for the ring drawing
 
 
 def log(msg: str) -> None:
@@ -97,10 +94,10 @@ def main() -> None:
     full = make_features(add_graph_feats(add_history(frame, fallback_amount=fallback)))  # once, on the full frame
     splits = time_split(full, fractions)
     assert_time_ordered_splits(splits)
-    # Real data adds the IEEE-CIS C/D/M columns; the synthetic generator has none of them.
+    # Real data adds the IEEE-CIS C/D/M and card/address columns; the synthetic generator has none of them.
     ieee = cfg["data"]["source"] == "ieee"
     features = IEEE_FEATURES if ieee else FEATURES
-    categorical = (*CATEGORICAL, *IEEE_MATCHES) if ieee else CATEGORICAL
+    categorical = (*CATEGORICAL, *IEEE_CATEGORICAL) if ieee else CATEGORICAL
     fields = raw_fields(features)
     levels = learn_category_levels(splits["train"], categorical)
     X = {k: feature_matrix(v, levels, features) for k, v in splits.items()}
@@ -144,7 +141,8 @@ def main() -> None:
 
     # Thresholds for the base model (needed by the attacker's success condition).
     risk_val = iso.predict(base.predict_proba(X["val"])[:, 1])
-    thresholds = choose_thresholds(risk_val, y["val"], splits["val"]["TransactionAmt"].to_numpy(), sim, margin)
+    thresholds = choose_thresholds(risk_val, y["val"], splits["val"]["TransactionAmt"].to_numpy(), sim, margin,
+                                   pol["max_friction_rate"])
 
     # ---- M6 adversary loop (E6) ----------------------------------------
     log("M6: adversarial retraining")
@@ -201,7 +199,8 @@ def main() -> None:
     risk_model = export(model, iso_final)
     results["parity_max_abs_diff"] = check_parity(model, iso_final, risk_model, X["test"])
     risk = {k: risk_model.predict(X[k]) for k in SPLIT_NAMES}
-    thresholds = choose_thresholds(risk["val"], y["val"], splits["val"]["TransactionAmt"].to_numpy(), sim, margin)
+    thresholds = choose_thresholds(risk["val"], y["val"], splits["val"]["TransactionAmt"].to_numpy(), sim, margin,
+                                   pol["max_friction_rate"])
     results["thresholds"] = thresholds
     results["deployed_metrics"] = report(y["test"], risk["test"])
     log(f"   thresholds {thresholds}")
@@ -374,7 +373,10 @@ def main() -> None:
               simple_yes=True)),
         ("suspicious", "Stolen card, new device, middle of the night",
          pick(is_kind("takeover") & (test.risk >= t["tau_allow"]), "risk", False)),
-        ("ring", "Device shared by many cards", pick(is_kind("ring") & (test.risk >= t["tau_allow"]), "DeviceInfo_distinct_uids", False)),
+        # A device shared by thousands of cards is an OS label ("Windows" in IEEE-CIS), not a ring.
+        ("ring", "Device shared by many cards",
+         pick(is_kind("ring") & (test.risk >= t["tau_allow"]) & (test.DeviceInfo_distinct_uids <= RING_MAX_CARDS),
+              "DeviceInfo_distinct_uids", False)),
         ("testing", "Card testing: tiny charge seconds after the last",
          pick(is_kind("testing") & (test.TransactionAmt < 6) & (test.DeviceInfo_distinct_uids <= 2), "since_last")),
     ]
@@ -394,8 +396,10 @@ def main() -> None:
         ring = full[(full.DeviceInfo == device) & (full.TransactionDT <= test.loc[ring_idx, "TransactionDT"])]
         results["ring_example"] = {
             "device": "device " + str(device)[-4:],
+            "totals": {"cards": int(ring.card1.nunique()), "payments": int(len(ring)), "fraud": int(ring.isFraud.sum())},
+            # The most recent payments only: the site draws one node per card.
             "edges": [{"card": f"card {int(r.card1)}", "amount": float(r.TransactionAmt), "fraud": bool(r.isFraud),
-                       "email": str(r.P_emaildomain)} for r in ring.itertuples()],
+                       "email": str(r.P_emaildomain)} for r in ring.tail(RING_MAX_EDGES).itertuples()],
         }
 
     reports = out / "reports"

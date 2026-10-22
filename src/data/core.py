@@ -21,11 +21,13 @@ FEATURES = (
     "TransactionAmt", "dist1", *ROW_FEATURES, *HISTORY_FEATURES, *GRAPH_FEATURES, *CATEGORICAL,
 )
 # IEEE-CIS only (the synthetic data has none of these): anonymised counts (C), time deltas
-# in days (D) and match flags (M, categorical). Requests that omit them get training defaults.
+# in days (D), match flags (M, categorical) and extra card/address codes. Requests that omit them get training defaults.
 IEEE_COUNTS = tuple(f"C{i}" for i in range(1, 15))
 IEEE_DELTAS = tuple(f"D{i}" for i in range(1, 16))
 IEEE_MATCHES = tuple(f"M{i}" for i in range(1, 10))
-IEEE_FEATURES = (*FEATURES, *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_MATCHES)
+IEEE_CARD = ("card2", "card3", "card5", "addr2", "dist2")  # anonymised card / address codes and distance
+IEEE_CATEGORICAL = (*IEEE_MATCHES, "R_emaildomain")
+IEEE_FEATURES = (*FEATURES, *IEEE_COUNTS, *IEEE_DELTAS, *IEEE_CARD, *IEEE_CATEGORICAL)
 
 # Plain-language names for explanations.
 LABELS = {
@@ -53,6 +55,9 @@ LABELS = {
     **{name: "Linked card and address counts" for name in IEEE_COUNTS},
     **{name: "Account age and payment gaps" for name in IEEE_DELTAS},
     **{name: "Name and address match checks" for name in IEEE_MATCHES},
+    "card2": "Card details", "card3": "Card details", "card5": "Card details",
+    "addr2": "Billing country", "dist2": "Distance from billing address",
+    "R_emaildomain": "Recipient email domain",
 }
 
 
