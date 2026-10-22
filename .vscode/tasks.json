@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // Runs in its own systemd scope: if training runs out of memory, only it is
+            // killed, not VS Code (and the Claude Code session inside it).
+            "label": "Train on IEEE-CIS (memory-capped)",
+            "type": "shell",
+            "command": "systemd-run --user --scope -q -p MemoryMax=4G .venv/bin/python -m src.experiments.run_all --source ieee --out runs/ieee",
+            "problemMatcher": []
+        }
+    ]
+}

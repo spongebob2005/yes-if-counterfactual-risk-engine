@@ -1,0 +1,31 @@
+{
+    // Keep VS Code light on this 7 GB machine: never watch, search or index the
+    // 650 MB IEEE-CIS CSVs, the venv, run outputs or the media files.
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.pytest_cache/**": true,
+        "**/data/**": true,
+        "**/.data/**": true,
+        "**/runs/**": true,
+        "**/docs/**": true,
+        "**/files/**": true,
+        "**/.agents/**": true
+    },
+    "search.exclude": {
+        "data/**": true,
+        ".data/**": true,
+        "runs/**": true,
+        ".venv/**": true,
+        "docs/**": true,
+        "files/**": true,
+        ".agents/**": true,
+        "reports/results.json": true
+    },
+    "python.analysis.exclude": ["data", ".data", "runs", ".venv", "docs", "files", "public", ".agents", "**/__pycache__"],
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    // Ask before opening anything over 50 MB (e.g. train_transaction.csv) in an editor tab.
+    "workbench.editorLargeFileConfirmation": 50,
+    "editor.largeFileOptimizations": true
+}
