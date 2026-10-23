@@ -18,6 +18,7 @@
 ## Tutorial and flowchart
 
 - **Tutorial video:** [`docs/yes-if-story.mp4`](docs/yes-if-story.mp4) walks through the product end to end.
+- **Live demo recording:** [`docs/yes-if-demo-on-device.mp4`](docs/yes-if-demo-on-device.mp4) drives the real site, console, sandbox checkout and API docs in Chrome. Re-record it with `node scripts/record_demo.js [baseUrl] [outDir]` (needs `npm i playwright`).
 - **Flowchart:** how one risky payment becomes the cheapest path to yes, plus what runs where. The editable source is [`docs/yes-if-flow.excalidraw`](docs/yes-if-flow.excalidraw); open it at [excalidraw.com](https://excalidraw.com) to change it.
 
 ![yes, if product decision flow and system architecture](docs/yes-if-flow.png)
@@ -102,17 +103,17 @@ python -m pip install -r requirements-dev.txt
 python -m src.experiments.run_all          # data → model → experiments → models/ + reports/ (~1 minute)
 uvicorn src.api.main:app --reload          # API + website on http://127.0.0.1:8000
 streamlit run dashboard/app.py             # offline dashboard
-python -m unittest discover -s tests       # TESTCOUNT tests (also run by GitHub Actions on every push and PR)
+python -m unittest discover -s tests       # 70 tests (also run by GitHub Actions on every push and PR)
 ```
 
 **Real data (IEEE-CIS).** Put `train_transaction.csv` and `train_identity.csv` from the [Kaggle competition](https://www.kaggle.com/c/ieee-fraud-detection/data) in `data/raw/`, then:
 
 ```bash
-python -m src.experiments.run_all --source ieee --out runs/ieee   # ~IEEEMIN minutes, leaves models/ alone
+python -m src.experiments.run_all --source ieee --out runs/ieee   # ~15 minutes, leaves models/ alone
 RISK_ENGINE_DIR=runs/ieee uvicorn src.api.main:app --reload     # serve the IEEE-CIS model instead
 ```
 
-Only the ~55 columns the features use are read, so it fits in a few GB of memory. The committed `runs/ieee/` holds the result.
+Only the ~55 columns the features use are read, so it fits in a few GB of memory (peak under 4 GB; on a small machine, run it in its own scope with `systemd-run --user --scope -p MemoryMax=4G …` so an out-of-memory kill takes only the training down). The committed `runs/ieee/` holds the result: on the 88,581 held-out payments (3.5% fraud), LightGBM reaches PR-AUC **0.464** vs 0.194 for logistic regression, ROC-AUC 0.887, and recall at 1% FPR 41.1% vs 12.2%. Real fraud is far harder to separate than the synthetic kinds, so these are the numbers to quote for real-world performance.
 
 `requirements.txt` holds only what the deployed API needs (FastAPI, numpy, requests, python-dotenv); training and the dashboard use `requirements-dev.txt`.
 
