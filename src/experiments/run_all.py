@@ -154,11 +154,13 @@ def main() -> None:
         return RiskEngine(export(model, iso_), meta)
 
     # Attacks are built from training-period fraud: validation stays clean for early stopping.
-    train_rows, val_rows, test_rows = (to_rows(splits[k], fields) for k in ("train", "val", "test"))
+    # Only fraud rows become dicts on the training split: all of it as dicts does not fit in memory on IEEE-CIS.
+    test_rows = to_rows(splits["test"], fields)
+    train_fraud_rows = to_rows(splits["train"][y["train"] == 1], fields)
     tau = thresholds["tau_allow"]
     eng = engine_for(base, iso, thresholds)
-    risk_train = eng.score(train_rows)
-    train_fraud = [r for r, yy, rr in zip(train_rows, y["train"], risk_train) if yy == 1 and rr >= tau]
+    risk_train = eng.score(train_fraud_rows)
+    train_fraud = [r for r, rr in zip(train_fraud_rows, risk_train) if rr >= tau]
     risk_test_base = eng.score(test_rows)
     test_fraud_idx = [i for i in np.where((y["test"] == 1) & (risk_test_base >= tau))[0]]
     test_fraud = [test_rows[i] for i in rng.choice(test_fraud_idx, min(300, len(test_fraud_idx)), replace=False)]

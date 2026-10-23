@@ -96,8 +96,10 @@ class TreeEnsemble:
             node = nxt
         return node
 
-    def predict_raw(self, X: np.ndarray) -> np.ndarray:
-        return self.value[self._walk(X)].sum(axis=1)
+    def predict_raw(self, X: np.ndarray, chunk: int = 20_000) -> np.ndarray:
+        # Chunked: _walk holds several rows x trees arrays, too much at once for a full IEEE-CIS split.
+        return np.concatenate([self.value[self._walk(X[i:i + chunk])].sum(axis=1)
+                               for i in range(0, max(len(X), 1), chunk)])
 
     def contributions(self, X: np.ndarray, n_features: int) -> tuple[np.ndarray, float]:
         """Per-feature path contributions to the raw score (Saabas), plus the shared bias."""
