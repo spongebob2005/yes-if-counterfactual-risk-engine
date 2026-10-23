@@ -74,7 +74,19 @@
       .offers { display: grid; gap: 6px; margin-top: 12px; }
       .offers button { padding: 11px 13px; border: 1px solid rgba(63,220,170,.35); border-radius: 10px; background: rgba(63,220,170,.05); color: var(--ink); text-align: left; cursor: pointer; font: inherit; font-size: .92rem; }
       .offers button[aria-pressed="true"] { background: rgba(63,220,170,.16); border-color: var(--mint); }
-      #paypal-buttons { margin-top: 16px; min-height: 10px; background: #fff0; }
+      /* PayPal renders its buttons in an iframe: only the SDK's style options reach them, so the panel carries the theme. */
+      .pay { position: relative; overflow: hidden; margin-top: 14px; padding: 16px 16px 12px; border: 1px solid var(--line-2); border-radius: 16px;
+             background: linear-gradient(180deg, rgba(63,220,170,.07), rgba(63,220,170,0) 55%), var(--bg-3); }
+      .pay::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--mint), var(--teal)); }
+      .pay-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+      .pay-head .amt { font-family: var(--display); font-weight: 700; font-size: 1.15rem; letter-spacing: -.02em; }
+      .pay-tag { padding: 3px 9px; border: 1px solid rgba(63,220,170,.35); border-radius: 999px; background: rgba(63,220,170,.08); color: var(--mint); font-family: var(--mono); font-size: .68rem; }
+      /* PayPal's iframe is light: with the page's dark color-scheme, Chrome paints it an opaque white backdrop. */
+      #paypal-buttons { min-height: 10px; color-scheme: light; border-radius: 12px; transition: background .2s, padding .2s; }
+      /* The inline card form is dark text on a transparent page: give it a light sheet while it is open. */
+      #paypal-buttons.form-open { padding: 12px; background: var(--ink); }
+      .pay-foot { display: flex; gap: 8px; align-items: center; margin: 10px 2px 0; color: var(--muted); font-size: .8rem; }
+      .pay-foot svg { flex: none; color: var(--mint); }
       .status { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-2); font-size: .9rem; color: var(--muted); }
       .status[data-state="ok"] { border-color: rgba(63,220,170,.45); color: var(--mint); background: rgba(63,220,170,.06); }
       .status[data-state="warn"] { border-color: rgba(245,184,92,.4); color: var(--amber); background: rgba(245,184,92,.06); }
@@ -196,7 +208,14 @@
             <div class="card pad">
               <div class="label">3 · What the buyer sees</div>
               <div class="buyer" id="buyer" style="margin-top:12px"><p class="empty">Loading…</p></div>
-              <div id="paypal-buttons"></div>
+              <div class="pay" id="pay" hidden>
+                <div class="pay-head">
+                  <div><div class="label">4 · Pay</div><div class="amt" id="pay-amt"></div></div>
+                  <span class="pay-tag">Sandbox · no real money</span>
+                </div>
+                <div id="paypal-buttons"></div>
+                <p class="pay-foot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>PayPal or card, the order is only authorized: the engine's plan decides what gets captured.</p>
+              </div>
               <div class="status" id="co-status" role="status" hidden></div>
             </div>
             <div class="card pad">
@@ -446,7 +465,10 @@
           pick($("personas"), (id) => { persona = id; refresh(); });
 
           function canPay() { return quote && (quote.buyer_sees.action !== "BLOCK" || offer !== null); }
-          function updateButtons() { $("paypal-buttons").style.display = canPay() && sdkReady ? "" : "none"; }
+          function updateButtons() {
+            $("pay").hidden = !(canPay() && sdkReady);
+            if (quote) $("pay-amt").textContent = offer === null ? money(quote.amount) : `${money(quote.amount)} · yes, if`;
+          }
 
           async function refresh() {
             offer = null; status.hidden = true;
@@ -501,7 +523,8 @@
           sdk.onload = () => {
             sdkReady = true; updateButtons();
             window.paypal.Buttons({
-              style: { layout: "vertical", shape: "pill", label: "pay" },
+              // Black matches the dark console and the card button, which PayPal always draws black.
+              style: { layout: "vertical", color: "black", shape: "rect", borderRadius: 12, height: 48, label: "pay" },
               onClick: (data, actions) => (canPay() ? actions.resolve() : actions.reject()),
               createOrder: async () => {
                 setStatus("Creating a sandbox order…");
@@ -515,7 +538,13 @@
               },
               onCancel: () => setStatus("Checkout cancelled. Nothing was authorized.", "warn"),
               onError: (err) => { console.error(err); setStatus("PayPal sandbox checkout failed. Nothing was captured; please retry.", "err"); },
-            }).render("#paypal-buttons");
+            }).render("#paypal-buttons").then(() => {
+              // Two buttons plus "Powered by" are ~140px tall; taller means the inline card form opened.
+              const box = $("paypal-buttons"), frame = box.querySelector("iframe");
+              if (!frame) return;
+              const watch = new ResizeObserver(() => box.classList.toggle("form-open", frame.offsetHeight > 220));
+              watch.observe(box); watch.observe(frame);
+            });
           };
           sdk.onerror = () => setStatus("Could not load PayPal's sandbox checkout.", "err");
           document.head.appendChild(sdk);
