@@ -18,6 +18,7 @@
 ## Tutorial and flowchart
 
 - **Tutorial video:** [`docs/yes-if-story.mp4`](docs/yes-if-story.mp4) walks through the product end to end.
+- **Narrated project review:** [`docs/yes-if-review.mp4`](docs/yes-if-review.mp4) (6 min, 1080p, voice-over and subtitles) covers the headline results, a live decision, the "yes, if" offers, the counterfactual explorer, the PayPal sandbox checkout, the research panels and the API.
 - **Live demo recording:** [`docs/yes-if-demo-on-device.mp4`](docs/yes-if-demo-on-device.mp4) drives the real site, console, sandbox checkout and API docs in Chrome. Re-record it with `node scripts/record_demo.js [baseUrl] [outDir]` (needs `npm i playwright`).
 - **Flowchart:** how one risky payment becomes the cheapest path to yes, plus what runs where. The editable source is [`docs/yes-if-flow.excalidraw`](docs/yes-if-flow.excalidraw); open it at [excalidraw.com](https://excalidraw.com) to change it.
 
@@ -132,7 +133,7 @@ curl -X POST "https://yes-if-silk.vercel.app/api/decide?view=analyst" \
 
 The console's **Sandbox checkout** tab scores a demo buyer before PayPal opens, creates an `AUTHORIZE` order for a server-side catalog price, and runs the engine's plan after approval. Depending on the decision, the plan captures, asks for a one-time code, holds for review, or offers a "yes, if" (part now, the rest later). Blocked buyers never reach PayPal.
 
-Local setup: `cp .env.example .env` and fill in `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from a PayPal developer **sandbox** app. Never commit `.env`. Orders are stored in SQLite locally (`.data/`) and in Upstash Redis on Vercel. `scripts/paypal_smoke_test.py` exercises authorize → capture / partial capture / void from the terminal.
+Local setup: create a `.env` file (git-ignored) with `PAYPAL_CLIENT_ID=...` and `PAYPAL_CLIENT_SECRET=...` from a PayPal developer **sandbox** app. Never commit it. Orders are stored in SQLite locally (`.data/`) and in Upstash Redis on Vercel. `scripts/paypal_smoke_test.py` exercises authorize → capture / partial capture / void from the terminal.
 
 ## Deploy
 
